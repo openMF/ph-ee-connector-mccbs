@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: ph-ee-connector-mastercard-cbs
+
+  datasource:
+    url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/operations}
+    username: ${DATASOURCE_USERNAME:root}
+    password: ${DATASOURCE_PASSWORD:mysql}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Zeebe Configuration
+zeebe:
+  client:
+    broker:
+      gateway-address: ${ZEEBE_BROKER_CONTACTPOINT:localhost:26500}
+    worker:
+      threads: ${ZEEBE_CLIENT_WORKER_THREADS:5}
+      defaultName: mastercard-cbs-connector
+      defaultType: mastercard-cbs
+    job:
+      timeout: 30000
+      pollinterval: 100
+
+# Mastercard CBS Configuration
+mastercard:
+  api:
+    url: ${MASTERCARD_API_URL:http://localhost:8080}
+    auth-url: ${MASTERCARD_AUTH_URL:http://localhost:8080/oauth/token}
+    partner-id: ${MASTERCARD_PARTNER_ID:MIFOS_GOVSTACK}
+  oauth:
+    client-id: ${MASTERCARD_CLIENT_ID:demo}
+    client-secret: ${MASTERCARD_CLIENT_SECRET:demo}
+    grant-type: client_credentials
+    token-cache-seconds: 3000
+  payment:
+    timeout-seconds: 30
+    max-retries: 3
+    retry-delay-seconds: 5
+  status:
+    check-enabled: ${MASTERCARD_STATUS_CHECK_ENABLED:true}
+    poll-interval-seconds: 3
+
+# Logging
+logging:
+  level:
+    root: INFO
+    org.mifos: ${LOGGING_LEVEL_ORG_MIFOS:DEBUG}
+    io.camunda: ${LOGGING_LEVEL_IO_CAMUNDA:INFO}
+    org.springframework: INFO
+    org.springframework.web: ${LOGGING_LEVEL_SPRING_WEB:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
+
+# Management/Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true

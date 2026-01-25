@@ -27,7 +27,9 @@ GovStack API → PaymentHub Operations → Identity Mapper → Bulk Processor �
 
 **Purpose**: Simulates Mastercard Cross-Border Services API for demo purposes
 
-**Location**: `repos/mastercard-cbs-simulator/`
+**Location**: `~/mastercard-cbs-simulator/`
+
+**Status**: Skeleton project only - requires full implementation of endpoints
 
 **Key Features**:
 - OAuth 2.0 token endpoint
@@ -41,19 +43,29 @@ GovStack API → PaymentHub Operations → Identity Mapper → Bulk Processor �
 - `POST /send/v1/partners/transfer` - Submit payment
 - `GET /send/v1/partners/transfer/{id}` - Get payment status
 
-**Deploy**:
+**Current Status**: Basic project structure exists but endpoints are not implemented.
+
+**To Complete Implementation**:
+1. Implement OAuth controller with `/oauth/token` endpoint
+2. Implement Payment controller with `/send/v1/partners/transfer` endpoints
+3. Implement status service for payment tracking
+4. Add in-memory storage for payment state
+
+**Deploy** (once implementation complete):
 ```bash
-cd repos/mastercard-cbs-simulator
+cd ~/mastercard-cbs-simulator
 mvn clean package
 docker build -t mastercard-cbs-simulator:1.0.0 .
-kubectl apply -f k8s/deployment.yaml
+# Kubernetes manifests not yet created
 ```
 
 ### Component 2: Mastercard CBS Connector
 
 **Purpose**: PaymentHub connector that integrates with Mastercard CBS
 
-**Location**: `repos/ph-ee-connector-mastercard-cbs/`
+**Location**: `/home/tdaly/ph-ee-connector-mccbs/`
+
+**Status**: ✅ Core implementation complete - 12 Java files, 352-line workers implementation
 
 **Key Features**:
 - Zeebe workers for CBS workflow steps
@@ -69,12 +81,20 @@ kubectl apply -f k8s/deployment.yaml
 4. `mastercard-cbs-check-status` - Retrieve payment status
 5. `mastercard-cbs-update-operations` - Update Operations DB
 
-**Deploy**:
+**Build and Deploy**:
 ```bash
-cd repos/ph-ee-connector-mastercard-cbs
-mvn clean package
+cd /home/tdaly/ph-ee-connector-mccbs
+
+# Build with Gradle (Note: wrapper not present, use system Gradle)
+gradle clean build
+
+# Or build with Docker
 docker build -t ph-ee-connector-mastercard-cbs:1.0.0 .
-kubectl apply -f k8s/deployment.yaml
+
+# Kubernetes deployment (manual - helm charts not yet created)
+kubectl create deployment ph-ee-connector-mastercard-cbs \
+  --image=ph-ee-connector-mastercard-cbs:1.0.0 \
+  -n paymenthub
 ```
 
 ### Component 3: Supplementary Data Database
@@ -82,6 +102,10 @@ kubectl apply -f k8s/deployment.yaml
 **Purpose**: Store regulatory/compliance data for CBS payments
 
 **Table**: `mastercard_cbs_supplementary_data` in operations DB
+
+**Schema File**: `/home/tdaly/ph-ee-connector-mccbs/src/utils/data-loading/mastercard-cbs-schema.sql`
+
+**Status**: ✅ SQL schema complete with 10 demo payees from diverse countries
 
 **Schema**:
 ```sql
@@ -127,15 +151,21 @@ CREATE TABLE mastercard_cbs_supplementary_data (
 
 **Load Data**:
 ```bash
-cd src/utils/data-loading
-python3 load-mastercard-cbs-supplementary-data.py --config ~/tomconfig.ini
+# Load SQL schema with demo data (10 payees included in schema file)
+mysql -h <mysql-host> -u root -p operations < \
+  /home/tdaly/ph-ee-connector-mccbs/src/utils/data-loading/mastercard-cbs-schema.sql
+
+# Note: Python data loading scripts not yet implemented
+# The SQL file includes INSERT statements for 10 demo payees
 ```
 
 ### Component 4: BPMN Workflow
 
-**File**: `orchestration/feel/bulk_connector_mastercard_cbs-DFSPID.bpmn`
+**File**: `/home/tdaly/ph-ee-connector-mccbs/orchestration/bulk_connector_mastercard_cbs-DFSPID.bpmn`
 
 **Workflow**: `bulk_connector_mastercard_cbs-{tenant}`
+
+**Status**: ✅ Complete BPMN workflow with 8 service tasks, retry logic, and error handling
 
 **Key Tasks**:
 1. Start → Validate Input
@@ -149,18 +179,28 @@ python3 load-mastercard-cbs-supplementary-data.py --config ~/tomconfig.ini
 
 **Deploy Workflow**:
 ```bash
-zbctl deploy orchestration/feel/bulk_connector_mastercard_cbs-DFSPID.bpmn \
+# From the connector directory
+cd /home/tdaly/ph-ee-connector-mccbs
+
+zbctl deploy orchestration/bulk_connector_mastercard_cbs-DFSPID.bpmn \
   --address ph-ee-zeebe-gateway:26500
+
+# Or if zbctl is configured with ZEEBE_ADDRESS env var:
+zbctl deploy orchestration/bulk_connector_mastercard_cbs-DFSPID.bpmn
 ```
 
 ### Component 5: Identity Account Mapper Pre-population
 
 **Purpose**: Map MSISDNs to account numbers for the 10 demo payees
 
-**Load Data**:
+**Status**: ⚠️ Data loading scripts not yet implemented
+
+**Load Data** (manual approach until scripts are created):
 ```bash
-cd src/utils/data-loading
-python3 load-identity-mapper-cbs-demo.py --config ~/tomconfig.ini
+# Manually insert into identity_account_mapper database
+# Or use existing mifos-gazelle data loading scripts
+cd ~/mifos-gazelle/src/utils/data-loading
+./generate-mifos-vnext-data.py --regenerate
 ```
 
 **Verification**:
@@ -180,17 +220,23 @@ WHERE pm.institution_code = 'MASTERCARD_CBS';
 ### Step 1: Create Supplementary Data Table
 
 ```bash
-mysql -h <mysql-host> -u root -p operations < src/utils/data-loading/mastercard-cbs-schema.sql
+mysql -h <mysql-host> -u root -p operations < \
+  /home/tdaly/ph-ee-connector-mccbs/src/utils/data-loading/mastercard-cbs-schema.sql
 ```
 
-### Step 2: Load Demo Data (10 Payees)
+### Step 2: Verify Demo Data Loaded (10 Payees)
+
+The SQL schema file includes INSERT statements for 10 demo payees. After running Step 1, verify:
 
 ```bash
-cd src/utils/data-loading
-python3 load-mastercard-cbs-supplementary-data.py \
-  --config ~/tomconfig.ini \
-  --demo-data ./mastercard-cbs-demo-payees.csv
+mysql -h <mysql-host> -u root -p operations -e \
+  "SELECT payee_msisdn, beneficiary_full_name, bank_name, beneficiary_country_code
+   FROM mastercard_cbs_supplementary_data
+   WHERE is_active = true
+   LIMIT 5;"
 ```
+
+_Note: Python data loading scripts not yet implemented. Demo data is embedded in SQL schema._
 
 **Sample Demo Payees** (`mastercard-cbs-demo-payees.csv`):
 ```csv
@@ -209,8 +255,15 @@ msisdn,account,first_name,last_name,address,city,state,postal_code,country,bank_
 
 ### Step 3: Load Identity Account Mapper
 
+_Note: Dedicated CBS loading script not yet implemented. Use mifos-gazelle scripts or manual SQL._
+
 ```bash
-python3 load-identity-mapper-cbs-demo.py --config ~/tomconfig.ini
+# Option 1: Use existing mifos-gazelle data generator
+cd ~/mifos-gazelle/src/utils/data-loading
+./generate-mifos-vnext-data.py --regenerate
+
+# Option 2: Manual SQL insertion (example for one payee)
+# INSERT INTO identity_account_mapper...
 ```
 
 **Verification**:
@@ -228,14 +281,24 @@ curl -X POST http://identity-mapper:8080/api/v1/identity-account-mapper/batch-ac
 
 ### Step 4: Deploy Mock Mastercard API
 
+**⚠️ IMPORTANT**: The simulator has only skeleton code. You must implement:
+- OAuth token endpoint controller
+- Payment submission endpoint controller
+- Payment status endpoint controller
+- In-memory payment storage service
+
 ```bash
-cd repos/mastercard-cbs-simulator
+cd ~/mastercard-cbs-simulator
+
+# Once implementation is complete:
 mvn clean package
 docker build -t mastercard-cbs-simulator:1.0.0 .
 
-# Deploy to Kubernetes
+# Kubernetes manifests not yet created - manual deployment required
 kubectl create namespace mastercard-simulator
-kubectl apply -f k8s/ -n mastercard-simulator
+kubectl create deployment mastercard-cbs-simulator \
+  --image=mastercard-cbs-simulator:1.0.0 \
+  -n mastercard-simulator
 
 # Verify deployment
 kubectl get pods -n mastercard-simulator
@@ -245,33 +308,42 @@ kubectl logs -f deployment/mastercard-cbs-simulator -n mastercard-simulator
 ### Step 5: Deploy CBS Connector
 
 ```bash
-cd repos/ph-ee-connector-mastercard-cbs
-mvn clean package
+cd /home/tdaly/ph-ee-connector-mccbs
+
+# Build with Gradle (no wrapper available, use system Gradle)
+gradle clean build
+
+# Build Docker image
 docker build -t ph-ee-connector-mastercard-cbs:1.0.0 .
 
-# Update Helm values
-cd repos/ph_template/helm/ph-ee-engine
+# Deploy to Kubernetes (manual - Helm charts not yet created)
+kubectl create deployment ph-ee-connector-mastercard-cbs \
+  --image=ph-ee-connector-mastercard-cbs:1.0.0 \
+  -n paymenthub
 
-# Add to values.yaml:
-# connector-mastercard-cbs:
-#   enabled: true
-#   image:
-#     repository: ph-ee-connector-mastercard-cbs
-#     tag: 1.0.0
-
-helm upgrade ph-ee . -n paymenthub
+# Add environment variables (example with ConfigMap)
+kubectl set env deployment/ph-ee-connector-mastercard-cbs \
+  ZEEBE_BROKER_CONTACTPOINT=zeebe-gateway:26500 \
+  MASTERCARD_API_URL=http://mastercard-simulator:8080 \
+  DATASOURCE_URL=jdbc:mysql://operationsdb-mysql:3306/operations \
+  -n paymenthub
 
 # Verify connector started
 kubectl get pods -n paymenthub | grep mastercard-cbs
-kubectl logs -f deployment/ph-ee-connector-mastercard-cbs -n paymenthub
+kubectl logs -f deployment/ph-ee-connector-mastercard-cbs -n paymenthub | grep "Registered worker"
 ```
 
 ### Step 6: Deploy BPMN Workflow
 
 ```bash
 # Deploy workflow to Zeebe
-zbctl deploy orchestration/feel/bulk_connector_mastercard_cbs-DFSPID.bpmn \
+cd /home/tdaly/ph-ee-connector-mccbs
+
+zbctl deploy orchestration/bulk_connector_mastercard_cbs-DFSPID.bpmn \
   --address <zeebe-gateway>:26500
+
+# Or if ZEEBE_ADDRESS is set:
+zbctl deploy orchestration/bulk_connector_mastercard_cbs-DFSPID.bpmn
 
 # Verify deployment
 zbctl list workflows --address <zeebe-gateway>:26500 | grep mastercard_cbs

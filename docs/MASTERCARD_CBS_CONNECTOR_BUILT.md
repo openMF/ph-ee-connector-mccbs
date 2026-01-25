@@ -42,7 +42,9 @@ zbctl deploy orchestration/feel/bulk_connector_mastercard_cbs-DFSPID.bpmn \
 
 ## 2. CBS Connector Service ✅
 
-**Location**: `repos/ph-ee-connector-mastercard-cbs/`
+**Location**: `/home/tdaly/ph-ee-connector-mccbs/`
+
+**Build Tool**: Gradle (no wrapper - use system Gradle or Docker build)
 
 ### Project Structure:
 ```
@@ -114,10 +116,10 @@ All 8 workers implemented with:
 
 ### Building:
 ```bash
-cd repos/ph-ee-connector-mastercard-cbs
+cd /home/tdaly/ph-ee-connector-mccbs
 
-# Build with Gradle
-./gradlew clean build
+# Build with Gradle (no wrapper present)
+gradle clean build
 
 # Build Docker image
 docker build -t ph-ee-connector-mastercard-cbs:1.0.0 .
@@ -125,14 +127,19 @@ docker build -t ph-ee-connector-mastercard-cbs:1.0.0 .
 
 ### Running Locally:
 ```bash
+cd /home/tdaly/ph-ee-connector-mccbs
+
 # Set environment variables
 export ZEEBE_BROKER_CONTACTPOINT=localhost:26500
 export MASTERCARD_API_URL=http://localhost:8080
 export DATASOURCE_URL=jdbc:mysql://localhost:3306/operations
 export DATASOURCE_PASSWORD=mysql
 
-# Run
-./gradlew bootRun
+# Run with Gradle
+gradle bootRun
+
+# Or run JAR directly
+java -jar build/libs/ph-ee-connector-mastercard-cbs-1.0.0-SNAPSHOT.jar
 ```
 
 ---
@@ -216,26 +223,32 @@ mysql -h <mysql-host> -u root -p operations -e \
 
 ### Still To Build:
 
-1. **Mock Mastercard CBS API Simulator** ⏳
-   - OAuth endpoint
-   - Payment submission endpoint
-   - Status retrieval endpoint
-   - In-memory payment storage
+1. **Mock Mastercard CBS API Simulator** ⚠️ SKELETON ONLY
+   - **Status**: Basic Spring Boot project structure exists at `~/mastercard-cbs-simulator/`
+   - **Missing**:
+     - OAuth token endpoint implementation
+     - Payment submission endpoint implementation
+     - Status retrieval endpoint implementation
+     - In-memory payment storage service
+   - **Has**: pom.xml, application class, one model (OAuthTokenResponse)
 
-2. **Helm Charts** ⏳
+2. **Helm Charts** ⏳ NOT STARTED
    - Connector deployment chart
    - ConfigMaps and Secrets
    - Service definitions
+   - Kubernetes manifests
 
-3. **Data Loading Scripts** ⏳
-   - Python script to load supplementary data
+3. **Data Loading Scripts** ⏳ NOT STARTED
+   - Python script to load supplementary data (schema has embedded INSERT statements as workaround)
    - Python script to populate identity mapper
-   - Test batch CSV files
+   - Test batch CSV generation
+   - submit-batch.py integration
 
-4. **Integration Testing** ⏳
+4. **Integration Testing** ⏳ NOT STARTED
    - End-to-end test scripts
    - UAT scenarios
    - Performance testing
+   - Unit tests for workers
 
 ---
 

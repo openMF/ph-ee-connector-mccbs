@@ -4,9 +4,16 @@
 
 **Objective**: Enable cross-border disbursements from GovStack solution through Mifos Payment Hub EE to Mastercard Cross-Border Services (CBS)
 
-**Scope**: Demo/proof-of-concept with limited functionality for user acceptance testing and demonstration purposes
+**Target**: **South Africa** - All payments to South African beneficiaries (ZAF)
 
-**Status**: Planning complete, ready for implementation
+**Scope**: Demo/proof-of-concept with limited functionality (10 South African payees)
+
+**Status**: Core connector built, requires updates for JIRA specifications (see JIRA_REQUIREMENTS_ANALYSIS.md)
+
+**Critical Updates Needed**:
+- 🔴 Add XML support (API uses XML, not JSON)
+- 🔴 Update schema for South Africa focus (all payees must be ZA)
+- ⚠️ Connect to real Mastercard sandbox (not mock API)
 
 ---
 
@@ -294,14 +301,24 @@ CREATE TABLE mastercard_cbs_supplementary_data (
 - [x] Quick start guide (step-by-step instructions)
 - [x] README (project overview)
 - [x] Implementation checklist (tracking document)
+- [x] Build and test guide (comprehensive instructions)
+- [x] Updated with accurate paths and build commands
 
-### Code (To Be Implemented)
-- [ ] CBS Connector service (Java/Spring Boot)
-- [ ] Mock Mastercard API simulator (Java/Spring Boot)
-- [ ] BPMN workflow
-- [ ] Database schema SQL
+### Code Status
+
+**✅ Completed:**
+- [x] CBS Connector service (Java/Spring Boot) - 12 files, 8 workers
+- [x] BPMN workflow - Complete with retry logic and error handling
+- [x] Database schema SQL - Includes 10 demo payees
+
+**⚠️ Partially Implemented:**
+- [~] Mock Mastercard API simulator - Skeleton only, needs endpoints
+
+**⏳ Not Started:**
 - [ ] Data loading scripts (Python)
-- [ ] Testing scripts (Bash/Python)
+- [ ] Helm charts and Kubernetes manifests
+- [ ] Integration tests
+- [ ] Unit tests
 
 ### Deployment Artifacts
 - [ ] Docker images (connector, simulator)
