@@ -115,7 +115,7 @@ public class MastercardCbsWorkers {
     @JobWorker(type = "mastercard-cbs-match-regulatory-data", autoComplete = true)
     public Map<String, Object> matchRegulatoryData(
             @Variable(name = "payeeIdentity") String payeeIdentity,
-            @Variable(name = "payeeAccountNumber", required = false) String payeeAccountNumber,
+            @Variable(name = "payeeAccountNumber") String payeeAccountNumber,
             @Variable(name = "transactionId") String transactionId) {
 
         log.info("Matching regulatory data for transaction: {}, payee: {}", transactionId, payeeIdentity);
@@ -290,8 +290,8 @@ public class MastercardCbsWorkers {
     @JobWorker(type = "mastercard-cbs-retry-handler", autoComplete = true)
     public Map<String, Object> retryHandler(
             ActivatedJob job,
-            @Variable(name = "authRetryCount", required = false) Integer authRetryCount,
-            @Variable(name = "paymentRetryCount", required = false) Integer paymentRetryCount) {
+            @Variable(name = "authRetryCount") Integer authRetryCount,
+            @Variable(name = "paymentRetryCount") Integer paymentRetryCount) {
 
         Map<String, Object> variables = new HashMap<>();
 
@@ -319,9 +319,9 @@ public class MastercardCbsWorkers {
     @JobWorker(type = "mastercard-cbs-log-error", autoComplete = true)
     public Map<String, Object> logError(
             ActivatedJob job,
-            @Variable(name = "transactionId", required = false) String transactionId,
-            @Variable(name = "errorCode", required = false) String errorCode,
-            @Variable(name = "errorMessage", required = false) String errorMessage) {
+            @Variable(name = "transactionId") String transactionId,
+            @Variable(name = "errorCode") String errorCode,
+            @Variable(name = "errorMessage") String errorMessage) {
 
         String errorType = job.getCustomHeaders().get("errorType");
 
