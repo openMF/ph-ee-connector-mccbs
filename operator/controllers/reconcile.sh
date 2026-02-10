@@ -13,6 +13,7 @@ log_error() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2; }
 reconcile() {
     local cr_name="$1"
     local namespace="$2"
+    local config_file="$3"
 
     log_info "Reconciling MastercardCBSConnector: $cr_name in namespace: $namespace"
 
@@ -47,20 +48,20 @@ reconcile() {
 
     # Phase 2: Create database schema and load data
     if [ "$(echo "$cr_json" | jq -r '.spec.dataLoading.autoLoad // true')" == "true" ]; then
-        load_database_data "$cr_name" "$namespace" "$cr_json"
+        load_database_data "$cr_name" "$namespace" "$cr_json" "$config_file"
     fi
 
     # Phase 3: Deploy mock simulator if enabled
     if [ "$(echo "$cr_json" | jq -r '.spec.simulator.enabled // true')" == "true" ]; then
-        deploy_simulator "$cr_name" "$namespace" "$cr_json"
+        deploy_simulator "$cr_name" "$namespace" "$cr_json" "$config_file"
     fi
 
     # Phase 4: Deploy connector
-    deploy_connector "$cr_name" "$namespace" "$cr_json"
+    deploy_connector "$cr_name" "$namespace" "$cr_json" "$config_file"
 
     # Phase 5: Deploy BPMN workflow
     if [ "$(echo "$cr_json" | jq -r '.spec.workflow.autoDeploy // true')" == "true" ]; then
-        deploy_workflow "$cr_name" "$namespace" "$cr_json"
+        deploy_workflow "$cr_name" "$namespace" "$cr_json" "$config_file"
     fi
 
     # Update status to Ready
@@ -129,6 +130,7 @@ load_database_data() {
     local cr_name="$1"
     local namespace="$2"
     local cr_json="$3"
+    local config_file="$4"
 
     log_info "Database schema management delegated to load-mastercard-supplementary-data.sh"
     log_info "Schema is now managed by: src/utils/data-loading/load-mastercard-supplementary-data.sh"
@@ -146,6 +148,7 @@ deploy_simulator() {
     local cr_name="$1"
     local namespace="$2"
     local cr_json="$3"
+    local config_file="$4"
 
     log_info "Deploying mock Mastercard API simulator..."
 
@@ -264,6 +267,7 @@ deploy_connector() {
     local cr_name="$1"
     local namespace="$2"
     local cr_json="$3"
+    local config_file="$4"
 
     log_info "Deploying CBS connector..."
 
@@ -407,40 +411,27 @@ deploy_workflow() {
     local cr_name="$1"
     local namespace="$2"
     local cr_json="$3"
+    local config_file="$4"
 
     log_info "Deploying BPMN workflows to Zeebe for all tenants..."
 
-    local zeebe_gateway
-    zeebe_gateway=$(echo "$cr_json" | jq -r '.spec.paymenthub.zeebeGateway // "zeebe-gateway.paymenthub.svc.cluster.local:26500"')
     local workflow_template="$HOME/ph-ee-connector-mccbs/orchestration/MastercardFundTransfer-DFSPID.bpmn"
+    local deploy_script="$HOME/mifos-gazelle/src/utils/deployBpmn-gazelle.sh"
 
-    # List of tenants to deploy for
-    local tenants=("greenbank" "redbank" "bluebank")
+    # Deploy using deployBpmn-gazelle.sh script (it handles multiple tenants)
+    if [ -f "$deploy_script" ]; then
+        log_info "Deploying workflow using deployBpmn-gazelle.sh (handles all tenants)..."
+        "$deploy_script" -c "$config_file" -f "$workflow_template" || {
+            log_warn "Failed to deploy workflow"
+            return 1
+        }
+    else
+        log_warn "deployBpmn-gazelle.sh not found at $deploy_script"
+        log_warn "Deploy manually: deployBpmn-gazelle.sh -c $config_file -f $workflow_template"
+        return 1
+    fi
 
-    for tenant in "${tenants[@]}"; do
-        log_info "Deploying workflow for tenant: $tenant"
-
-        # Create tenant-specific BPMN by replacing DFSPID with tenant name
-        local tenant_workflow="/tmp/MastercardFundTransfer-${tenant}.bpmn"
-        sed "s/DFSPID/${tenant}/g" "$workflow_template" > "$tenant_workflow"
-
-        # Deploy using deployBpmn-gazelle.sh script
-        local deploy_script="$HOME/mifos-gazelle/src/utils/deployBpmn-gazelle.sh"
-        if [ -f "$deploy_script" ]; then
-            log_info "Deploying workflow for tenant $tenant using deployBpmn-gazelle.sh..."
-            "$deploy_script" -c "$HOME/tomconfig.ini" -f "$tenant_workflow" -t "$tenant" || {
-                log_warn "Failed to deploy workflow for tenant $tenant"
-            }
-        else
-            log_warn "deployBpmn-gazelle.sh not found at $deploy_script"
-            log_warn "Deploy manually: deployBpmn-gazelle.sh -f $tenant_workflow -t $tenant"
-        fi
-
-        # Clean up temp file
-        rm -f "$tenant_workflow"
-    done
-
-    log_info "All tenant workflows deployed successfully"
+    log_info "Workflow deployment complete"
 }
 
 # Cleanup resources
@@ -472,7 +463,9 @@ update_status() {
 
 # Watch for CR changes (simple polling for now)
 watch_resources() {
+    local config_file="$1"
     log_info "Starting operator controller..."
+    log_info "Using config file: $config_file"
 
     while true; do
         # Get all MastercardCBSConnector CRs
@@ -481,7 +474,7 @@ watch_resources() {
 
         # Reconcile each CR
         echo "$crs" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.namespace)"' | while IFS='|' read -r name ns; do
-            reconcile "$name" "$ns" || log_error "Failed to reconcile $name in $ns"
+            reconcile "$name" "$ns" "$config_file" || log_error "Failed to reconcile $name in $ns"
         done
 
         # Sleep before next reconciliation loop
@@ -491,7 +484,40 @@ watch_resources() {
 
 # Main entry point
 main() {
+    # Default config file location
+    local config_file="${HOME}/mifos-gazelle/config/config.ini"
+
+    # Parse command-line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -c|--config)
+                config_file="$2"
+                shift 2
+                ;;
+            -h|--help)
+                echo "Usage: $0 [-c|--config CONFIG_FILE]"
+                echo ""
+                echo "Options:"
+                echo "  -c, --config FILE    Path to config INI file (default: ~/mifos-gazelle/config/config.ini)"
+                echo "  -h, --help          Show this help message"
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                echo "Use -h or --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
+
+    # Validate config file exists
+    if [ ! -f "$config_file" ]; then
+        log_error "Config file not found: $config_file"
+        exit 1
+    fi
+
     log_info "Mastercard CBS Operator starting..."
+    log_info "Config file: $config_file"
 
     # Check prerequisites
     if ! command -v kubectl >/dev/null 2>&1; then
@@ -505,7 +531,7 @@ main() {
     fi
 
     # Start watching
-    watch_resources
+    watch_resources "$config_file"
 }
 
 # Run main if executed directly
