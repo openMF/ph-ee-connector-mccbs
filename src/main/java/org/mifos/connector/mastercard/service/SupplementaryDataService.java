@@ -20,10 +20,10 @@ public class SupplementaryDataService {
     private final JdbcTemplate jdbcTemplate;
 
     private static final String FIND_BY_MSISDN_SQL =
-            "SELECT * FROM mastercard_cbs_supplementary_data WHERE payee_msisdn = ? AND is_active = true";
+            "SELECT * FROM mastercard_cbs_supplementary_data WHERE payee_msisdn = ?";
 
     private static final String FIND_BY_ACCOUNT_SQL =
-            "SELECT * FROM mastercard_cbs_supplementary_data WHERE payee_account_number = ? AND is_active = true";
+            "SELECT * FROM mastercard_cbs_supplementary_data WHERE payee_account_number = ?";
 
     public Optional<SupplementaryData> findByMsisdn(String msisdn) {
         try {
@@ -35,8 +35,9 @@ public class SupplementaryDataService {
                     msisdn
             );
 
-            log.info("Found supplementary data for MSISDN: {}, beneficiary: {}",
-                    msisdn, data != null ? data.getBeneficiaryFullName() : "null");
+            log.info("Found supplementary data for MSISDN: {}, recipient: {} {}",
+                    msisdn, data != null ? data.getRecipientFirstName() : "null",
+                    data != null ? data.getRecipientLastName() : "null");
 
             return Optional.ofNullable(data);
 
@@ -59,8 +60,9 @@ public class SupplementaryDataService {
                     accountNumber
             );
 
-            log.info("Found supplementary data for account: {}, beneficiary: {}",
-                    accountNumber, data != null ? data.getBeneficiaryFullName() : "null");
+            log.info("Found supplementary data for account: {}, recipient: {} {}",
+                    accountNumber, data != null ? data.getRecipientFirstName() : "null",
+                    data != null ? data.getRecipientLastName() : "null");
 
             return Optional.ofNullable(data);
 
@@ -80,34 +82,35 @@ public class SupplementaryDataService {
                     .id(rs.getLong("id"))
                     .payeeMsisdn(rs.getString("payee_msisdn"))
                     .payeeAccountNumber(rs.getString("payee_account_number"))
-                    // Beneficiary details
-                    .beneficiaryFullName(rs.getString("beneficiary_full_name"))
-                    .beneficiaryFirstName(rs.getString("beneficiary_first_name"))
-                    .beneficiaryLastName(rs.getString("beneficiary_last_name"))
-                    .beneficiaryAddressLine1(rs.getString("beneficiary_address_line1"))
-                    .beneficiaryAddressLine2(rs.getString("beneficiary_address_line2"))
-                    .beneficiaryCity(rs.getString("beneficiary_city"))
-                    .beneficiaryState(rs.getString("beneficiary_state"))
-                    .beneficiaryPostalCode(rs.getString("beneficiary_postal_code"))
-                    .beneficiaryCountryCode(rs.getString("beneficiary_country_code"))
-                    // Bank details
+                    // Static sender information (PHEE-353)
+                    .senderOrganisationName(rs.getString("sender_organisation_name"))
+                    .senderAddressLine1(rs.getString("sender_address_line1"))
+                    .senderAddressCity(rs.getString("sender_address_city"))
+                    .senderAddressCountry(rs.getString("sender_address_country"))
+                    .paymentOriginationCountry(rs.getString("payment_origination_country"))
+                    .destinationCountryIso3(rs.getString("destination_country_iso3"))
+                    .beneficiaryCurrency(rs.getString("beneficiary_currency"))
+                    .beneficiaryCurrencyDecimalPrecision(rs.getInt("beneficiary_currency_decimal_precision"))
+                    .destinationServiceTag(rs.getString("destination_service_tag"))
+                    .paymentType(rs.getString("payment_type"))
+                    // Variable recipient details (PHEE-353)
+                    .recipientFirstName(rs.getString("recipient_first_name"))
+                    .recipientLastName(rs.getString("recipient_last_name"))
+                    .recipientAddressLine1(rs.getString("recipient_address_line1"))
+                    .recipientAddressCountry(rs.getString("recipient_address_country"))
+                    .recipientPhone(rs.getString("recipient_phone"))
+                    .recipientEmail(rs.getString("recipient_email"))
+                    // Bank details (PHEE-353)
                     .bankName(rs.getString("bank_name"))
-                    .bankBicSwift(rs.getString("bank_bic_swift"))
-                    .bankRoutingNumber(rs.getString("bank_routing_number"))
+                    .bankSwiftCode(rs.getString("bank_swift_code"))
+                    .bankBranchName(rs.getString("bank_branch_name"))
                     .bankCountryCode(rs.getString("bank_country_code"))
-                    .bankBranchCode(rs.getString("bank_branch_code"))
                     // Regulatory
                     .purposeOfPayment(rs.getString("purpose_of_payment"))
-                    .sourceOfFunds(rs.getString("source_of_funds"))
-                    .beneficiaryTaxId(rs.getString("beneficiary_tax_id"))
-                    .beneficiaryIdType(rs.getString("beneficiary_id_type"))
-                    .beneficiaryIdNumber(rs.getString("beneficiary_id_number"))
                     // Metadata
-                    .createdDate(rs.getTimestamp("created_date") != null ?
-                            rs.getTimestamp("created_date").toLocalDateTime() : null)
-                    .updatedDate(rs.getTimestamp("updated_date") != null ?
-                            rs.getTimestamp("updated_date").toLocalDateTime() : null)
-                    .isActive(rs.getBoolean("is_active"))
+                    .createdBy(rs.getString("created_by"))
+                    .createdAt(rs.getTimestamp("created_at") != null ?
+                            rs.getTimestamp("created_at").toLocalDateTime() : null)
                     .build();
         }
     }

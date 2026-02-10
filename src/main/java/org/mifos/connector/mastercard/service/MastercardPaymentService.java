@@ -41,8 +41,10 @@ public class MastercardPaymentService {
 
             HttpEntity<MastercardPaymentRequest> httpRequest = new HttpEntity<>(request, headers);
 
+            String beneficiaryName = (suppData.getRecipientFirstName() != null ? suppData.getRecipientFirstName() : "") +
+                    " " + (suppData.getRecipientLastName() != null ? suppData.getRecipientLastName() : "");
             log.info("Initiating CBS payment for transaction: {}, amount: {} {}, beneficiary: {}",
-                    transactionId, amount, currency, suppData.getBeneficiaryFullName());
+                    transactionId, amount, currency, beneficiaryName.trim());
 
             ResponseEntity<MastercardPaymentResponse> response = restTemplate.exchange(
                     apiUrl,
@@ -107,37 +109,37 @@ public class MastercardPaymentService {
             String currency,
             SupplementaryData suppData) {
 
+        // PHEE-355: Merge data from supplementary data (static fields) and request (dynamic fields)
         return MastercardPaymentRequest.builder()
                 .partnerId(mastercardConfig.getApi().getPartnerId())
                 .transactionReference(transactionId)
-                .paymentType("PERSON_TO_PERSON")
+                .paymentType(suppData.getPaymentType()) // PHEE-355: Use payment_type from supplementary data (e.g., "B2P")
                 .amount(MastercardPaymentRequest.AmountInfo.builder()
                         .value(amount.toPlainString())
                         .currency(currency)
                         .build())
-                .sender(buildSenderInfo())
-                .recipient(buildRecipientInfo(payeeAccount, suppData))
+                .sender(buildSenderInfo(suppData)) // PHEE-355: Sender org info from supplementary data
+                .recipient(buildRecipientInfo(payeeAccount, suppData)) // PHEE-355: Recipient details from supplementary data
                 .purposeOfPayment(suppData.getPurposeOfPayment() != null ?
                         suppData.getPurposeOfPayment() : "Government disbursement")
                 .regulatoryCompliance(MastercardPaymentRequest.RegulatoryCompliance.builder()
-                        .sourceOfFunds(suppData.getSourceOfFunds() != null ?
-                                suppData.getSourceOfFunds() : "GOVERNMENT")
+                        .sourceOfFunds("GOVERNMENT") // PHEE-355: Static value for G2P payments
                         .purposeCode("GOVT_TRANSFER")
                         .build())
                 .build();
     }
 
-    private MastercardPaymentRequest.SenderInfo buildSenderInfo() {
-        // Default sender (government program)
+    private MastercardPaymentRequest.SenderInfo buildSenderInfo(SupplementaryData suppData) {
+        // PHEE-355: Use sender information from supplementary data table
         return MastercardPaymentRequest.SenderInfo.builder()
-                .name("GovStack Payment Program")
+                .name(suppData.getSenderOrganisationName())
                 .address(MastercardPaymentRequest.AddressInfo.builder()
-                        .line1("Government Plaza")
-                        .city("Capital City")
-                        .country("XX")
+                        .line1(suppData.getSenderAddressLine1())
+                        .city(suppData.getSenderAddressCity())
+                        .country(suppData.getSenderAddressCountry())
                         .build())
                 .account(MastercardPaymentRequest.AccountInfo.builder()
-                        .number("GOV-ACCOUNT-001")
+                        .number("GOV-ACCOUNT-001") // TODO: Add to supplementary data if needed
                         .type("GOVERNMENT")
                         .build())
                 .build();
@@ -147,15 +149,19 @@ public class MastercardPaymentService {
             String payeeAccount,
             SupplementaryData suppData) {
 
+        // Build full name from first and last name
+        String fullName = (suppData.getRecipientFirstName() != null ? suppData.getRecipientFirstName() : "") +
+                " " + (suppData.getRecipientLastName() != null ? suppData.getRecipientLastName() : "");
+
         return MastercardPaymentRequest.RecipientInfo.builder()
-                .name(suppData.getBeneficiaryFullName())
+                .name(fullName.trim())
                 .address(MastercardPaymentRequest.AddressInfo.builder()
-                        .line1(suppData.getBeneficiaryAddressLine1())
-                        .line2(suppData.getBeneficiaryAddressLine2())
-                        .city(suppData.getBeneficiaryCity())
-                        .state(suppData.getBeneficiaryState())
-                        .postalCode(suppData.getBeneficiaryPostalCode())
-                        .country(suppData.getBeneficiaryCountryCode())
+                        .line1(suppData.getRecipientAddressLine1())
+                        .line2(null) // Not in database schema
+                        .city(null) // Not in database schema
+                        .state(null) // Not in database schema
+                        .postalCode(null) // Not in database schema
+                        .country(suppData.getRecipientAddressCountry())
                         .build())
                 .account(MastercardPaymentRequest.AccountInfo.builder()
                         .number(payeeAccount)
@@ -163,14 +169,14 @@ public class MastercardPaymentService {
                         .build())
                 .bank(MastercardPaymentRequest.BankInfo.builder()
                         .name(suppData.getBankName())
-                        .swiftBic(suppData.getBankBicSwift())
-                        .routingNumber(suppData.getBankRoutingNumber())
+                        .swiftBic(suppData.getBankSwiftCode())
+                        .routingNumber(null) // Not in database schema
                         .country(suppData.getBankCountryCode())
-                        .branchCode(suppData.getBankBranchCode())
+                        .branchCode(suppData.getBankBranchName())
                         .build())
-                .taxId(suppData.getBeneficiaryTaxId())
-                .idType(suppData.getBeneficiaryIdType())
-                .idNumber(suppData.getBeneficiaryIdNumber())
+                .taxId(null) // Not in database schema
+                .idType(null) // Not in database schema
+                .idNumber(null) // Not in database schema
                 .build();
     }
 }

@@ -126,6 +126,21 @@ spec:
                         tag:
                           type: string
                           default: "1.0.0"
+                    localdev:
+                      type: object
+                      description: "Local development configuration for simulator"
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: "Enable localdev mode for simulator"
+                          default: false
+                        hostPath:
+                          type: string
+                          description: "Host path to mount simulator code from"
+                        jarPath:
+                          type: string
+                          description: "Path to JAR file inside container"
+                          default: "/app/build/libs/mastercard-cbs-simulator-1.0.0-SNAPSHOT.jar"
 
                 # Data Loading Configuration
                 dataLoading:
@@ -175,6 +190,22 @@ spec:
                         memory:
                           type: string
                           default: "256Mi"
+
+                # Local Development Configuration
+                localdev:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: "Enable local development mode with hostPath mounting"
+                      default: false
+                    hostPath:
+                      type: string
+                      description: "Host path to mount for local development"
+                    jarPath:
+                      type: string
+                      description: "Path to JAR file inside mounted directory"
+                      default: "/app/build/libs/ph-ee-connector-mastercard-cbs-1.0.0-SNAPSHOT.jar"
 
             status:
               type: object

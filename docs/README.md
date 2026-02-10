@@ -195,6 +195,43 @@ Check database connection and data:
 SELECT COUNT(*) FROM mastercard_cbs_supplementary_data WHERE is_active = true;
 ```
 
+## Documentation
+
+For detailed guides and information, see:
+
+- **[docs/INDEX.md](INDEX.md)** - Complete documentation index
+- **[INTEGRATION_QUICKSTART.md](INTEGRATION_QUICKSTART.md)** - Step-by-step setup with mifos-gazelle
+- **[BUILD_AND_TEST.md](BUILD_AND_TEST.md)** - Detailed build and test instructions
+- **[OPERATOR_DEPLOYMENT_GUIDE.md](OPERATOR_DEPLOYMENT_GUIDE.md)** - Kubernetes operator deployment
+- **[LOCALDEV.md](LOCALDEV.md)** - Local development tips and tricks
+- **[MIFOS_GAZELLE_INTEGRATION.md](MIFOS_GAZELLE_INTEGRATION.md)** - Integration architecture
+- **[JIRA_REQUIREMENTS_ANALYSIS.md](JIRA_REQUIREMENTS_ANALYSIS.md)** - Requirements reference (PHEE-351)
+- **[GENERATED_SOLUTION_SUMMARY.md](GENERATED_SOLUTION_SUMMARY.md)** - Solution overview and architecture
+- **[GOVSTACK.md](GOVSTACK.md)** - GovStack G2P architecture reference
+
+## Quick Start
+
+1. Review the [Integration Quickstart](INTEGRATION_QUICKSTART.md)
+2. Set up the [database schema](../src/utils/data-loading/mastercard-cbs-schema-v2.sql)
+3. Load supplementary data with [load-mastercard-supplementary-data.py](../src/utils/data-loading/load-mastercard-supplementary-data.py)
+4. Build and deploy the connector (see [BUILD_AND_TEST.md](BUILD_AND_TEST.md))
+5. Deploy the BPMN workflow from [orchestration/](../orchestration/)
+6. Submit test batch using mifos-gazelle tools
+
+## Project Structure
+
+```
+ph-ee-connector-mccbs/
+├── docs/                      # Documentation (this directory)
+├── src/                       # Java source code
+│   ├── main/java/             # Application code
+│   └── utils/data-loading/    # Database scripts and data loaders
+├── orchestration/             # BPMN workflows
+├── operator/                  # Kubernetes operator
+├── build.gradle               # Gradle build configuration
+└── Dockerfile                 # Container image build
+```
+
 ## License
 
 Apache License 2.0

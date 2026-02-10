@@ -3,7 +3,7 @@ spring:
     name: ph-ee-connector-mastercard-cbs
 
   datasource:
-    url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/operations}
+    url: ${DATASOURCE_URL:jdbc:mysql://operationsmysql.paymenthub.svc.cluster.local:3306/operations}
     username: ${DATASOURCE_USERNAME:root}
     password: ${DATASOURCE_PASSWORD:mysql}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -22,7 +22,7 @@ spring:
 zeebe:
   client:
     broker:
-      gateway-address: ${ZEEBE_BROKER_CONTACTPOINT:localhost:26500}
+      gateway-address: ${ZEEBE_BROKER_CONTACTPOINT:phee-zeebe-gateway.paymenthub.svc.cluster.local:26500}
     worker:
       threads: ${ZEEBE_CLIENT_WORKER_THREADS:5}
       defaultName: mastercard-cbs-connector
@@ -30,12 +30,14 @@ zeebe:
     job:
       timeout: 30000
       pollinterval: 100
+    request-timeout: 45000
+    message-time-to-live: 60000
 
 # Mastercard CBS Configuration
 mastercard:
   api:
-    url: ${MASTERCARD_API_URL:http://localhost:8080}
-    auth-url: ${MASTERCARD_AUTH_URL:http://localhost:8080/oauth/token}
+    url: ${MASTERCARD_API_URL:http://mastercard-simulator.mastercard-demo.svc.cluster.local:8080}
+    auth-url: ${MASTERCARD_AUTH_URL:http://mastercard-simulator.mastercard-demo.svc.cluster.local:8080/oauth/token}
     partner-id: ${MASTERCARD_PARTNER_ID:MIFOS_GOVSTACK}
   oauth:
     client-id: ${MASTERCARD_CLIENT_ID:demo}
@@ -49,6 +51,13 @@ mastercard:
   status:
     check-enabled: ${MASTERCARD_STATUS_CHECK_ENABLED:true}
     poll-interval-seconds: 3
+
+# Operations App Configuration
+operations:
+  api:
+    base-url: ${OPERATIONS_API_URL:http://ph-ee-operations-app.paymenthub.svc.cluster.local}
+    timeout-seconds: 10
+    enabled: ${OPERATIONS_API_ENABLED:true}
 
 # Logging
 logging:

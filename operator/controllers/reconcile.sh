@@ -42,6 +42,9 @@ reconcile() {
     # Phase 1: Ensure namespace exists
     ensure_namespace "$namespace"
 
+    # Phase 1.5: Copy MySQL secret from paymenthub
+    copy_mysql_secret "$namespace" "$cr_json"
+
     # Phase 2: Create database schema and load data
     if [ "$(echo "$cr_json" | jq -r '.spec.dataLoading.autoLoad // true')" == "true" ]; then
         load_database_data "$cr_name" "$namespace" "$cr_json"
@@ -78,86 +81,64 @@ ensure_namespace() {
     fi
 }
 
+# Copy MySQL secret from paymenthub namespace
+copy_mysql_secret() {
+    local namespace="$1"
+    local cr_json="$2"
+
+    local ph_namespace
+    ph_namespace=$(echo "$cr_json" | jq -r '.spec.paymenthub.namespace // "paymenthub"')
+
+    log_info "Copying MySQL secret from $ph_namespace to $namespace..."
+
+    # Check if mysql-secret already exists in target namespace
+    if kubectl get secret mysql-secret -n "$namespace" >/dev/null 2>&1; then
+        log_info "mysql-secret already exists in $namespace"
+        return 0
+    fi
+
+    # Try to get operationsmysql secret (the actual name in paymenthub)
+    if kubectl get secret operationsmysql -n "$ph_namespace" >/dev/null 2>&1; then
+        kubectl get secret operationsmysql -n "$ph_namespace" -o json | \
+            jq --arg ns "$namespace" '
+                .metadata.namespace = $ns |
+                .metadata.name = "mysql-secret" |
+                .data.password = .data["mysql-root-password"] |
+                del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp)
+            ' | \
+            kubectl apply -f -
+        log_info "Copied operationsmysql secret as mysql-secret"
+        return 0
+    fi
+
+    # Fallback: try mysql-secret
+    if kubectl get secret mysql-secret -n "$ph_namespace" >/dev/null 2>&1; then
+        kubectl get secret mysql-secret -n "$ph_namespace" -o json | \
+            jq --arg ns "$namespace" '.metadata.namespace = $ns | del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp)' | \
+            kubectl apply -f -
+        log_info "Copied mysql-secret"
+        return 0
+    fi
+
+    log_warn "Could not find MySQL secret in $ph_namespace"
+    return 1
+}
+
 # Load database data
 load_database_data() {
     local cr_name="$1"
     local namespace="$2"
     local cr_json="$3"
 
-    log_info "Loading database schema and data..."
+    log_info "Database schema management delegated to load-mastercard-supplementary-data.sh"
+    log_info "Schema is now managed by: src/utils/data-loading/load-mastercard-supplementary-data.sh"
+    log_info "Run that script to create the PHEE-351 compliant schema and load test data"
 
-    # Get PaymentHub database config
-    local db_host
-    db_host=$(echo "$cr_json" | jq -r '.spec.paymenthub.operationsDb.host // "operationsmysql.paymenthub.svc.cluster.local"')
-    local db_port
-    db_port=$(echo "$cr_json" | jq -r '.spec.paymenthub.operationsDb.port // 3306')
-    local db_name
-    db_name=$(echo "$cr_json" | jq -r '.spec.paymenthub.operationsDb.database // "operations"')
+    # Note: Schema creation has been removed from operator as per design decision
+    # to keep schema management in a single location (the data loading script).
+    # This follows the principle of having schema and data loading in one place.
 
-    # Create a Kubernetes Job to load data
-    cat <<EOF | kubectl apply -f -
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: ${cr_name}-data-loader
-  namespace: ${namespace}
-  labels:
-    app.kubernetes.io/name: mastercard-cbs-data-loader
-    app.kubernetes.io/instance: ${cr_name}
-spec:
-  ttlSecondsAfterFinished: 300
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-      - name: data-loader
-        image: python:3.11-slim
-        command:
-          - /bin/bash
-          - -c
-          - |
-            set -e
-            echo "Installing dependencies..."
-            pip install mysql-connector-python --quiet
-
-            echo "Loading schema..."
-            mysql -h ${db_host} -P ${db_port} -u root -p\${MYSQL_ROOT_PASSWORD} ${db_name} < /scripts/mastercard-cbs-schema-v2.sql || true
-
-            echo "Running data loader..."
-            python3 /scripts/load-mastercard-supplementary-data.py -c /config/config.ini
-
-            echo "Data loading complete"
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-secret
-              key: password
-        volumeMounts:
-        - name: scripts
-          mountPath: /scripts
-        - name: config
-          mountPath: /config
-      volumes:
-      - name: scripts
-        hostPath:
-          path: $HOME/ph-ee-connector-mccbs/src/utils/data-loading
-          type: Directory
-      - name: config
-        hostPath:
-          path: $HOME
-          type: Directory
-EOF
-
-    # Wait for job to complete
-    log_info "Waiting for data loading job to complete..."
-    kubectl wait --for=condition=complete --timeout=300s job/${cr_name}-data-loader -n "$namespace" || {
-        log_error "Data loading job failed"
-        kubectl logs job/${cr_name}-data-loader -n "$namespace"
-        return 1
-    }
-
-    log_info "Database data loaded successfully"
+    return 0
 }
 
 # Deploy mock simulator
@@ -168,10 +149,56 @@ deploy_simulator() {
 
     log_info "Deploying mock Mastercard API simulator..."
 
+    # Check if localdev mode is enabled for simulator
+    local sim_localdev_enabled
+    sim_localdev_enabled=$(echo "$cr_json" | jq -r '.spec.simulator.localdev.enabled // false')
+
     local image_repo
-    image_repo=$(echo "$cr_json" | jq -r '.spec.simulator.image.repository // "mastercard-cbs-simulator"')
     local image_tag
-    image_tag=$(echo "$cr_json" | jq -r '.spec.simulator.image.tag // "1.0.0"')
+    local sim_command_section=""
+    local sim_volumes_section=""
+    local sim_volumemounts_section=""
+
+    if [ "$sim_localdev_enabled" == "true" ]; then
+        log_info "Simulator local development mode ENABLED"
+
+        # Use JDK image for local dev
+        image_repo="eclipse-temurin"
+        image_tag="17"
+
+        local sim_host_path
+        sim_host_path=$(echo "$cr_json" | jq -r '.spec.simulator.localdev.hostPath // env.HOME + "/mastercard-cbs-simulator"')
+
+        local sim_jar_path
+        sim_jar_path=$(echo "$cr_json" | jq -r '.spec.simulator.localdev.jarPath // "/app/build/libs/mastercard-cbs-simulator-1.0.0-SNAPSHOT.jar"')
+
+        log_info "  Simulator host path: $sim_host_path"
+        log_info "  Simulator JAR path: $sim_jar_path"
+        log_info "  Simulator image: $image_repo:$image_tag"
+
+        # Add command override to run JAR
+        sim_command_section="        command: [\"java\"]
+        args:
+          - \"-jar\"
+          - \"${sim_jar_path}\"
+          - \"--spring.profiles.active=default\""
+
+        # Add volume mount
+        sim_volumemounts_section="        volumeMounts:
+        - name: simulator-code
+          mountPath: /app"
+
+        # Add volume definition
+        sim_volumes_section="      volumes:
+      - name: simulator-code
+        hostPath:
+          path: ${sim_host_path}
+          type: Directory"
+    else
+        # Use built simulator image
+        image_repo=$(echo "$cr_json" | jq -r '.spec.simulator.image.repository // "mastercard-cbs-simulator"')
+        image_tag=$(echo "$cr_json" | jq -r '.spec.simulator.image.tag // "1.0.0"')
+    fi
 
     kubectl apply -n "$namespace" -f - <<EOF
 apiVersion: apps/v1
@@ -195,6 +222,7 @@ spec:
       containers:
       - name: simulator
         image: ${image_repo}:${image_tag}
+${sim_command_section}
         ports:
         - containerPort: 8080
           name: http
@@ -203,6 +231,7 @@ spec:
           value: "8080"
         - name: OAUTH_ISSUER
           value: "mastercard-simulator"
+${sim_volumemounts_section}
         resources:
           limits:
             cpu: "200m"
@@ -210,6 +239,7 @@ spec:
           requests:
             cpu: "100m"
             memory: "128Mi"
+${sim_volumes_section}
 ---
 apiVersion: v1
 kind: Service
@@ -246,6 +276,7 @@ deploy_connector() {
     local command_section=""
     local volumes_section=""
     local volumemounts_section=""
+    local extra_env_section=""
 
     if [ "$localdev_enabled" == "true" ]; then
         log_info "Local development mode ENABLED"
@@ -264,12 +295,14 @@ deploy_connector() {
         log_info "  JAR path: $jar_path"
         log_info "  Image: $image_repo:$image_tag"
 
-        # Add command override to run JAR
+        # Add command override to run JAR with orchestration directory in classpath
         command_section="        command: [\"java\"]
         args:
-          - \"-jar\"
-          - \"${jar_path}\"
-          - \"--spring.profiles.active=default\""
+          - \"-cp\"
+          - \"${jar_path}:/app/orchestration\"
+          - \"org.springframework.boot.loader.launch.JarLauncher\"
+          - \"--spring.profiles.active=default\"
+          - \"--zeebe.client.security.plaintext=true\""
 
         # Add volume mount
         volumemounts_section="        volumeMounts:
@@ -326,6 +359,8 @@ ${command_section}
         env:
         - name: ZEEBE_BROKER_CONTACTPOINT
           value: "${zeebe_gateway}"
+        - name: ZEEBE_CLIENT_SECURITY_PLAINTEXT
+          value: "true"
         - name: MASTERCARD_API_URL
           value: "${mastercard_api_url}"
         - name: MASTERCARD_AUTH_URL
@@ -373,30 +408,39 @@ deploy_workflow() {
     local namespace="$2"
     local cr_json="$3"
 
-    log_info "Deploying BPMN workflow to Zeebe..."
+    log_info "Deploying BPMN workflows to Zeebe for all tenants..."
 
     local zeebe_gateway
     zeebe_gateway=$(echo "$cr_json" | jq -r '.spec.paymenthub.zeebeGateway // "zeebe-gateway.paymenthub.svc.cluster.local:26500"')
-    local workflow_path="$HOME/ph-ee-connector-mccbs/orchestration/bulk_connector_mastercard_cbs-DFSPID.bpmn"
+    local workflow_template="$HOME/ph-ee-connector-mccbs/orchestration/MastercardFundTransfer-DFSPID.bpmn"
 
-    # Deploy using zbctl or kubectl exec into zeebe pod
-    if command -v zbctl >/dev/null 2>&1; then
-        zbctl deploy "$workflow_path" --address "$zeebe_gateway" || {
-            log_warn "Failed to deploy workflow with zbctl, trying alternative method..."
-            # Alternative: copy to a zeebe pod and deploy from there
-            local zeebe_pod
-            zeebe_pod=$(kubectl get pods -n paymenthub -l app.kubernetes.io/component=gateway -o name | head -1)
-            if [ -n "$zeebe_pod" ]; then
-                kubectl cp "$workflow_path" -n paymenthub "$zeebe_pod:/tmp/workflow.bpmn"
-                kubectl exec -n paymenthub "$zeebe_pod" -- zbctl deploy /tmp/workflow.bpmn
-            fi
-        }
-    else
-        log_warn "zbctl not found, skipping workflow deployment"
-        log_warn "Deploy manually: zbctl deploy $workflow_path"
-    fi
+    # List of tenants to deploy for
+    local tenants=("greenbank" "redbank" "bluebank")
 
-    log_info "Workflow deployed successfully"
+    for tenant in "${tenants[@]}"; do
+        log_info "Deploying workflow for tenant: $tenant"
+
+        # Create tenant-specific BPMN by replacing DFSPID with tenant name
+        local tenant_workflow="/tmp/MastercardFundTransfer-${tenant}.bpmn"
+        sed "s/DFSPID/${tenant}/g" "$workflow_template" > "$tenant_workflow"
+
+        # Deploy using deployBpmn-gazelle.sh script
+        local deploy_script="$HOME/mifos-gazelle/src/utils/deployBpmn-gazelle.sh"
+        if [ -f "$deploy_script" ]; then
+            log_info "Deploying workflow for tenant $tenant using deployBpmn-gazelle.sh..."
+            "$deploy_script" -c "$HOME/tomconfig.ini" -f "$tenant_workflow" -t "$tenant" || {
+                log_warn "Failed to deploy workflow for tenant $tenant"
+            }
+        else
+            log_warn "deployBpmn-gazelle.sh not found at $deploy_script"
+            log_warn "Deploy manually: deployBpmn-gazelle.sh -f $tenant_workflow -t $tenant"
+        fi
+
+        # Clean up temp file
+        rm -f "$tenant_workflow"
+    done
+
+    log_info "All tenant workflows deployed successfully"
 }
 
 # Cleanup resources

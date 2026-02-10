@@ -18,79 +18,102 @@ public class SupplementaryData {
 
     private Long id;
 
+    // Lookup Keys (from identity_account_mapper)
     @JsonProperty("payee_msisdn")
     private String payeeMsisdn;
 
     @JsonProperty("payee_account_number")
     private String payeeAccountNumber;
 
-    // Beneficiary Details
-    @JsonProperty("beneficiary_full_name")
-    private String beneficiaryFullName;
+    // Static Sender Information (PHEE-353 - table defaults)
+    @JsonProperty("sender_organisation_name")
+    private String senderOrganisationName;
 
-    @JsonProperty("beneficiary_first_name")
-    private String beneficiaryFirstName;
+    @JsonProperty("sender_address_line1")
+    private String senderAddressLine1;
 
-    @JsonProperty("beneficiary_last_name")
-    private String beneficiaryLastName;
+    @JsonProperty("sender_address_city")
+    private String senderAddressCity;
 
-    @JsonProperty("beneficiary_address_line1")
-    private String beneficiaryAddressLine1;
+    @JsonProperty("sender_address_country")
+    private String senderAddressCountry;
 
-    @JsonProperty("beneficiary_address_line2")
-    private String beneficiaryAddressLine2;
+    @JsonProperty("sender_id_number")
+    private String senderIdNumber;
 
-    @JsonProperty("beneficiary_city")
-    private String beneficiaryCity;
+    @JsonProperty("payment_origination_country")
+    private String paymentOriginationCountry;
 
-    @JsonProperty("beneficiary_state")
-    private String beneficiaryState;
+    @JsonProperty("destination_country_iso3")
+    private String destinationCountryIso3;
 
-    @JsonProperty("beneficiary_postal_code")
-    private String beneficiaryPostalCode;
+    @JsonProperty("beneficiary_currency")
+    private String beneficiaryCurrency;
 
-    @JsonProperty("beneficiary_country_code")
-    private String beneficiaryCountryCode;
+    @JsonProperty("beneficiary_currency_decimal_precision")
+    private Integer beneficiaryCurrencyDecimalPrecision;
 
-    // Bank Details
+    @JsonProperty("destination_service_tag")
+    private String destinationServiceTag;
+
+    @JsonProperty("payment_type")
+    private String paymentType;
+
+    // Variable Recipient Details (PHEE-353 - per beneficiary)
+    @JsonProperty("recipient_first_name")
+    private String recipientFirstName;
+
+    @JsonProperty("recipient_last_name")
+    private String recipientLastName;
+
+    @JsonProperty("recipient_id_type")
+    private String recipientIdType;
+
+    @JsonProperty("recipient_id_number")
+    private String recipientIdNumber;
+
+    @JsonProperty("recipient_address_line1")
+    private String recipientAddressLine1;
+
+    @JsonProperty("recipient_address_city")
+    private String recipientAddressCity;
+
+    @JsonProperty("recipient_address_country")
+    private String recipientAddressCountry;
+
+    @JsonProperty("recipient_postal_code")
+    private String recipientPostalCode;
+
+    @JsonProperty("recipient_phone")
+    private String recipientPhone;
+
+    @JsonProperty("recipient_email")
+    private String recipientEmail;
+
+    // Bank Details (PHEE-353)
     @JsonProperty("bank_name")
     private String bankName;
 
-    @JsonProperty("bank_bic_swift")
-    private String bankBicSwift;
+    @JsonProperty("bank_swift_code")
+    private String bankSwiftCode;
 
-    @JsonProperty("bank_routing_number")
-    private String bankRoutingNumber;
+    @JsonProperty("bank_branch_name")
+    private String bankBranchName;
+
+    @JsonProperty("bank_address")
+    private String bankAddress;
 
     @JsonProperty("bank_country_code")
     private String bankCountryCode;
-
-    @JsonProperty("bank_branch_code")
-    private String bankBranchCode;
 
     // Regulatory/Compliance
     @JsonProperty("purpose_of_payment")
     private String purposeOfPayment;
 
-    @JsonProperty("source_of_funds")
-    private String sourceOfFunds;
-
-    @JsonProperty("beneficiary_tax_id")
-    private String beneficiaryTaxId;
-
-    @JsonProperty("beneficiary_id_type")
-    private String beneficiaryIdType;
-
-    @JsonProperty("beneficiary_id_number")
-    private String beneficiaryIdNumber;
-
     // Metadata
-    @JsonProperty("created_date")
-    private LocalDateTime createdDate;
+    @JsonProperty("created_by")
+    private String createdBy;
 
-    @JsonProperty("updated_date")
-    private LocalDateTime updatedDate;
-
-    @JsonProperty("is_active")
-    private Boolean isActive;
+    @JsonProperty("created_at")
+    private LocalDateTime createdAt;
 }

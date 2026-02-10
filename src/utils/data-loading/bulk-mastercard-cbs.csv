@@ -1,0 +1,3 @@
+id,request_id,payment_mode,payer_identifier_type,payer_identifier,payee_identifier_type,payee_identifier,amount,currency,note
+0,cbs-0001,MASTERCARD_CBS,MSISDN,0413509790,MSISDN,0495492927,403.38,ZAR,"Social grant payment to Maria Garcia in ES"
+1,cbs-0002,MASTERCARD_CBS,MSISDN,0413509790,MSISDN,0495678066,403.38,ZAR,"Social grant payment to Antonio Martinez in ES"
