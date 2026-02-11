@@ -1,5 +1,10 @@
 # Mastercard CBS Connector Configuration
 
+> **Related Documentation:**
+> - For local development setup, see [LOCALDEV.md](LOCALDEV.md)
+> - For operator deployment, see [OPERATOR_DEPLOYMENT_GUIDE.md](OPERATOR_DEPLOYMENT_GUIDE.md)
+> - For mifos-gazelle integration, see [MASTERCARD-CBS-INTEGRATION.md](MASTERCARD-CBS-INTEGRATION.md)
+
 ## Configuration File: config.ini
 
 The Mastercard CBS connector is configured in `config/config.ini` under the `[mastercard-demo]` section.

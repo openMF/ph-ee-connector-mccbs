@@ -1,5 +1,11 @@
 # Mastercard CBS Integration with Mifos-Gazelle
 
+> **Related Documentation:**
+> - For operator deployment details, see [OPERATOR_DEPLOYMENT_GUIDE.md](OPERATOR_DEPLOYMENT_GUIDE.md)
+> - For local development, see [LOCALDEV.md](LOCALDEV.md)
+> - For data loading and scripts, see [MIFOS_GAZELLE_INTEGRATION.md](MIFOS_GAZELLE_INTEGRATION.md)
+> - For GovStack flows, see [MASTERCARD-GOVSTACK-IMPLEMENTATION.md](MASTERCARD-GOVSTACK-IMPLEMENTATION.md)
+
 ## Overview
 
 The Mastercard CBS connector has been integrated into mifos-gazelle using a **Kubernetes Operator** pattern. This provides declarative configuration, automatic reconciliation, and seamless integration with the existing PaymentHub deployment.

@@ -197,17 +197,30 @@ SELECT COUNT(*) FROM mastercard_cbs_supplementary_data WHERE is_active = true;
 
 ## Documentation
 
-For detailed guides and information, see:
-
-- **[docs/INDEX.md](INDEX.md)** - Complete documentation index
+### Getting Started
+- **[INDEX.md](INDEX.md)** - Complete documentation index and navigation guide
 - **[INTEGRATION_QUICKSTART.md](INTEGRATION_QUICKSTART.md)** - Step-by-step setup with mifos-gazelle
-- **[BUILD_AND_TEST.md](BUILD_AND_TEST.md)** - Detailed build and test instructions
+
+### Build and Deployment
+- **[BUILD_AND_TEST.md](BUILD_AND_TEST.md)** - Building connector from source
+- **[MASTERCARD-DEPLOY-AND-TEST.md](MASTERCARD-DEPLOY-AND-TEST.md)** - GovStack deployment and testing
 - **[OPERATOR_DEPLOYMENT_GUIDE.md](OPERATOR_DEPLOYMENT_GUIDE.md)** - Kubernetes operator deployment
-- **[LOCALDEV.md](LOCALDEV.md)** - Local development tips and tricks
-- **[MIFOS_GAZELLE_INTEGRATION.md](MIFOS_GAZELLE_INTEGRATION.md)** - Integration architecture
+
+### Development
+- **[LOCALDEV.md](LOCALDEV.md)** - Local development with simulator support
+- **[MASTERCARD-CONFIG.md](MASTERCARD-CONFIG.md)** - Configuration reference
+
+### Integration
+- **[MASTERCARD-CBS-INTEGRATION.md](MASTERCARD-CBS-INTEGRATION.md)** - Mifos-gazelle integration (operator pattern)
+- **[MIFOS_GAZELLE_INTEGRATION.md](MIFOS_GAZELLE_INTEGRATION.md)** - Data loading scripts and patterns
+
+### Architecture
+- **[GOVSTACK.md](GOVSTACK.md)** - General GovStack G2P architecture
+- **[MASTERCARD-GOVSTACK-IMPLEMENTATION.md](MASTERCARD-GOVSTACK-IMPLEMENTATION.md)** - Mastercard CBS GovStack implementation
+- **[GENERATED_SOLUTION_SUMMARY.md](GENERATED_SOLUTION_SUMMARY.md)** - Solution overview
+
+### Requirements
 - **[JIRA_REQUIREMENTS_ANALYSIS.md](JIRA_REQUIREMENTS_ANALYSIS.md)** - Requirements reference (PHEE-351)
-- **[GENERATED_SOLUTION_SUMMARY.md](GENERATED_SOLUTION_SUMMARY.md)** - Solution overview and architecture
-- **[GOVSTACK.md](GOVSTACK.md)** - GovStack G2P architecture reference
 
 ## Quick Start
 

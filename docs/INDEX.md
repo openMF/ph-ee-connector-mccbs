@@ -94,21 +94,27 @@ New to this project? Start with these documents in order:
 
 ## 🔄 Documentation Maintenance
 
-This documentation has been streamlined to remove duplicates and outdated content. The following documents were removed during consolidation:
+This documentation has been rationalized to remove duplicates and overlapping content.
 
-- MASTERCARD_CBS_README.md (duplicate of README.md)
-- MASTERCARD_CBS_QUICKSTART.md (duplicate of INTEGRATION_QUICKSTART.md)
-- MASTERCARD_CBS_SUMMARY.md (duplicate of GENERATED_SOLUTION_SUMMARY.md)
-- MASTERCARD_CBS_IMPLEMENTATION_PLAN.md (outdated planning doc)
-- MASTERCARD_CBS_FILE_INDEX.md (replaced by this INDEX.md)
-- MASTERCARD_CBS_IMPLEMENTATION_CHECKLIST.md (outdated tracking doc)
-- MASTERCARD_CBS_CONNECTOR_BUILT.md (outdated status doc)
-- jira-ticket.md (merged into JIRA_REQUIREMENTS_ANALYSIS.md)
-- QUICK_JIRA_SUMMARY.md (merged into JIRA_REQUIREMENTS_ANALYSIS.md)
-- DOCUMENTATION_UPDATES.md (meta documentation, not needed)
-- REVISED_IMPLEMENTATION_ROADMAP.md (outdated roadmap)
+### Recent Rationalization (2026-02-11)
 
-**Documentation Philosophy**: Keep only current, non-duplicate documentation that serves a clear purpose.
+**Files Removed:**
+- `MASTERCARD-INTEGRATION-SUMMARY.md` → Redundant with MASTERCARD-CBS-INTEGRATION.md (less detailed)
+- `MASTERCARD-LOCALDEV.md` → Merged into LOCALDEV.md (simulator + config.ini sections added)
+
+**Files Enhanced:**
+- `LOCALDEV.md` → Now includes simulator localdev, mifos-gazelle integration, and Helm vs Operator comparison
+- `MIFOS_GAZELLE_INTEGRATION.md` → Added cross-references to GovStack docs to avoid duplication
+
+**Files Kept (each serves distinct purpose):**
+- `BUILD_AND_TEST.md` - Initial build and component verification
+- `MASTERCARD-DEPLOY-AND-TEST.md` - GovStack-specific deployment and testing
+- `GOVSTACK.md` - General GovStack architecture concepts
+- `MASTERCARD-GOVSTACK-IMPLEMENTATION.md` - Mastercard CBS GovStack implementation
+- `MASTERCARD-CBS-INTEGRATION.md` - Kubernetes operator technical deployment
+- `MIFOS_GAZELLE_INTEGRATION.md` - Data loading scripts and integration patterns
+
+**Documentation Philosophy**: Keep only current, non-duplicate documentation that serves a clear purpose. Use cross-references to avoid content duplication.
 
 ---
 

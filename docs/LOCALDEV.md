@@ -246,17 +246,150 @@ spec:
 kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
 ```
 
-## Integration with mifos-gazelle localdev.py
+## Simulator LocalDev Support
 
-The `localdev.py` script can optionally checkout the Mastercard CBS repository, but patching is not supported since it's operator-based:
+The Mastercard CBS mock simulator also supports localdev mode for development.
 
-```bash
-# Checkout repo only
-cd ~/mifos-gazelle/src/utils/localdev
-./localdev.py --checkout mastercard-cbs
+### Enable Simulator LocalDev via config.ini
+
+Edit `~/mifos-gazelle/config/config.ini`:
+
+```ini
+[mastercard-demo]
+# Enable simulator localdev mode
+MASTERCARD_SIMULATOR_LOCALDEV_ENABLED = true
 ```
 
-But localdev deployment must be done via Custom Resource, not the patcher.
+Then deploy:
+```bash
+cd ~/mifos-gazelle
+sudo ./run.sh -a mastercard-demo
+```
+
+When `MASTERCARD_SIMULATOR_LOCALDEV_ENABLED = true`, the deployment will:
+- Mount `~/mastercard-cbs-simulator` as hostPath → `/app` in simulator container
+- Use JDK image (`eclipse-temurin:17`) instead of built simulator image
+- Run the JAR from your local directory
+
+### Simulator Development Loop
+
+```bash
+# Edit simulator code
+vim ~/mastercard-cbs-simulator/src/main/java/com/mifos/simulator/controller/SimulatorController.java
+
+# Rebuild JAR
+cd ~/mastercard-cbs-simulator
+./gradlew clean bootJar
+
+# Restart simulator pod
+kubectl delete pod -n mastercard-demo -l app=mastercard-cbs-simulator
+
+# Watch logs
+kubectl logs -n mastercard-demo -l app=mastercard-cbs-simulator -f
+```
+
+### Simulator Custom Resource Spec
+
+```yaml
+spec:
+  simulator:
+    enabled: true
+    image:
+      repository: eclipse-temurin
+      tag: "17"
+    localdev:
+      enabled: true
+      hostPath: "/home/tdaly/mastercard-cbs-simulator"
+      jarPath: "/app/build/libs/mastercard-cbs-simulator-1.0.0-SNAPSHOT.jar"
+```
+
+## Integration with mifos-gazelle
+
+### Deploying via config.ini
+
+When deploying via `run.sh`, you can enable connector localdev mode via config.ini:
+
+```ini
+[mastercard-demo]
+# Enable connector localdev mode
+MASTERCARD_LOCALDEV_ENABLED = true
+```
+
+Then deploy:
+```bash
+cd ~/mifos-gazelle
+sudo ./run.sh -a mastercard-demo
+```
+
+### Manual Custom Resource Application
+
+Or apply the localdev Custom Resource manually after deployment:
+
+```bash
+kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+```
+
+## Why Not Use localdev.py?
+
+The `localdev.py` script is designed for **Helm chart deployments** where it:
+1. Reads Helm `templates/deployment.yaml`
+2. Creates backup (`_deployment.yaml.backup`)
+3. Patches the YAML to add hostPath volumes
+4. Marks file with `git skip-worktree` to prevent accidental commits
+
+**Mastercard CBS uses an operator**, which means:
+- No Helm `templates/deployment.yaml` to patch
+- Deployment is generated dynamically by operator
+- Configuration is in the **Custom Resource**, not Helm values
+
+Therefore, localdev support is **built into the operator itself** via the CR spec.
+
+### Helm vs Operator LocalDev Comparison
+
+#### Helm-based Component (e.g., connector-channel)
+
+**Setup:**
+```bash
+cd ~/mifos-gazelle/src/utils/localdev
+./localdev.py channel  # Patches Helm deployment.yaml
+```
+
+**Result:**
+- Modifies `repos/ph_template/helm/ph-ee-engine/connector-channel/templates/deployment.yaml`
+- Adds hostPath volume and volume mount
+- Overrides image and command
+- Creates backup file
+
+**Revert:**
+```bash
+./localdev.py --restore channel
+```
+
+#### Operator-based Component (Mastercard CBS)
+
+**Setup:**
+```bash
+kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+```
+
+**Result:**
+- Operator reads `spec.localdev.enabled: true` from CR
+- Operator generates deployment with hostPath, volume mount, image override, and command override
+- No files modified on disk
+- Changes applied dynamically
+
+**Revert:**
+```bash
+kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-default.yaml
+```
+
+### Advantages of Operator-Based LocalDev
+
+1. **No File Patching**: No need to modify and track deployment YAML files
+2. **Git Clean**: No risk of accidentally committing local dev changes
+3. **Declarative**: All config in Custom Resource (infrastructure as code)
+4. **Easy Toggle**: Switch modes by applying different CR
+5. **Automatic Reconciliation**: Operator ensures deployment matches desired state
 
 ## Summary
 

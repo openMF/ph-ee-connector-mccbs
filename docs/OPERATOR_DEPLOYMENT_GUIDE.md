@@ -1,5 +1,10 @@
 ###  Mastercard CBS - Operator Deployment Guide
 
+> **Related Documentation:**
+> - For local development with operator, see [LOCALDEV.md](LOCALDEV.md)
+> - For mifos-gazelle integration, see [MASTERCARD-CBS-INTEGRATION.md](MASTERCARD-CBS-INTEGRATION.md)
+> - For configuration options, see [MASTERCARD-CONFIG.md](MASTERCARD-CONFIG.md)
+
 ## Architecture Overview
 
 The Mastercard CBS connector uses a **Kubernetes Operator** pattern instead of traditional Helm charts. This provides:

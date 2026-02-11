@@ -1,8 +1,12 @@
 # GovStack G2P Bulk Disbursement Architecture
 
+> **Related Documentation:**
+> - For Mastercard CBS GovStack implementation, see [MASTERCARD-GOVSTACK-IMPLEMENTATION.md](MASTERCARD-GOVSTACK-IMPLEMENTATION.md)
+> - For deployment and testing, see [MASTERCARD-DEPLOY-AND-TEST.md](MASTERCARD-DEPLOY-AND-TEST.md)
+
 ## Document Purpose
 
-This document explains the GovStack Government-to-Person (G2P) bulk disbursement architecture as implemented in mifos-gazelle, based on the official GovStack specification and the actual codebase implementation.
+This document explains the general GovStack Government-to-Person (G2P) bulk disbursement architecture as implemented in mifos-gazelle, based on the official GovStack specification and the actual codebase implementation.
 
 **Key References:**
 - GovStack Spec: `/home/tdaly/my-mac-dir/tmp/bulk-disburesement.pdf`

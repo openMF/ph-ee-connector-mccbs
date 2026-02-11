@@ -1,8 +1,10 @@
 # Mastercard CBS Integration with Mifos-Gazelle
 
+> **Note**: For architectural concepts and GovStack G2P flows, see [GOVSTACK.md](GOVSTACK.md) and [MASTERCARD-GOVSTACK-IMPLEMENTATION.md](MASTERCARD-GOVSTACK-IMPLEMENTATION.md). This document focuses on mifos-gazelle integration patterns, data loading scripts, and deployment configuration.
+
 ## Overview
 
-The Mastercard CBS connector will be deployed as part of mifos-gazelle on a dedicated **mastercard branch**, leveraging existing PaymentHub infrastructure and data loading tools.
+The Mastercard CBS connector integrates with mifos-gazelle deployment system, leveraging existing PaymentHub infrastructure and data loading tools.
 
 ## Integration Points
 
