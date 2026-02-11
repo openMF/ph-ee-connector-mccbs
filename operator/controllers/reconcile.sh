@@ -441,13 +441,48 @@ cleanup_resources() {
 
     log_info "Cleaning up resources for $cr_name in $namespace..."
 
+    # Delete Kubernetes resources
     kubectl delete deployment ph-ee-connector-mastercard-cbs -n "$namespace" --ignore-not-found=true
     kubectl delete deployment mastercard-cbs-simulator -n "$namespace" --ignore-not-found=true
     kubectl delete service ph-ee-connector-mastercard-cbs -n "$namespace" --ignore-not-found=true
     kubectl delete service mastercard-simulator -n "$namespace" --ignore-not-found=true
     kubectl delete job ${cr_name}-data-loader -n "$namespace" --ignore-not-found=true
 
+    # Remove BPMN workflows from Zeebe
+    cleanup_workflows
+
     log_info "Cleanup complete"
+}
+
+# Cleanup BPMN workflows from Zeebe
+cleanup_workflows() {
+    log_info "Cleaning up BPMN workflows from Zeebe..."
+
+    # Check if zbctl is available
+    if ! command -v zbctl >/dev/null 2>&1; then
+        log_warn "zbctl not found - cannot remove workflows automatically"
+        log_warn "Manually delete workflows if needed using Zeebe Operate UI or zbctl"
+        return 0
+    fi
+
+    # List of workflow IDs to delete (tenant-specific)
+    local workflow_ids=(
+        "MastercardFundTransfer-greenbank"
+        "MastercardFundTransfer-redbank"
+        "MastercardFundTransfer-bluebank"
+    )
+
+    for workflow_id in "${workflow_ids[@]}"; do
+        log_info "Checking for workflow: $workflow_id"
+
+        # Note: zbctl doesn't have a direct delete command
+        # Workflows can only be "cancelled" for running instances
+        # Process definitions remain in Zeebe history
+        log_warn "Zeebe does not support deleting process definitions"
+        log_warn "Workflow $workflow_id will remain in Zeebe (no active instances will be affected)"
+    done
+
+    log_info "Workflow cleanup notes logged - see Zeebe Operate for manual cleanup if needed"
 }
 
 # Update CR status
@@ -513,6 +548,12 @@ main() {
     # Validate config file exists
     if [ ! -f "$config_file" ]; then
         log_error "Config file not found: $config_file"
+        log_error ""
+        log_error "The default config file location is: ~/mifos-gazelle/config/config.ini"
+        log_error "If your config file is in a different location, use the -c flag:"
+        log_error "  $0 -c /path/to/your/config.ini"
+        log_error ""
+        log_error "Example: $0 -c /home/user/custom-config.ini"
         exit 1
     fi
 
