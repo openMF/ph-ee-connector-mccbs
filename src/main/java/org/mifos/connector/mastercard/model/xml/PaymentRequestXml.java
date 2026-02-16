@@ -10,53 +10,43 @@ import java.util.List;
 
 /**
  * XML model for Mastercard CBS Payment Request
- * Format matches Mastercard Cross-Border Services API specification
+ * Format matches Mastercard Cross-Border Services API specification (reference app)
+ * Root element is <paymentrequest> (no wrapper)
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@XmlRootElement(name = "PaymentRequestWrapper")
+@XmlRootElement(name = "paymentrequest")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class PaymentRequestXml {
 
-    @XmlElement(name = "paymentrequest")
-    private PaymentRequestDetail paymentRequest;
+    @XmlElement(name = "transaction_reference")
+    private String transactionReference;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @XmlAccessorType(XmlAccessType.FIELD)
-    public static class PaymentRequestDetail {
+    @XmlElement(name = "recipient_account_uri")
+    private String recipientAccountUri;
 
-        @XmlElement(name = "transaction_reference")
-        private String transactionReference;
+    @XmlElement(name = "payment_amount")
+    private PaymentAmount paymentAmount;
 
-        @XmlElement(name = "recipient_account_uri")
-        private String recipientAccountUri;
+    @XmlElement(name = "payment_origination_country")
+    private String paymentOriginationCountry;
 
-        @XmlElement(name = "payment_amount")
-        private PaymentAmount paymentAmount;
+    @XmlElement(name = "payment_type")
+    private String paymentType;
 
-        @XmlElement(name = "payment_origination_country")
-        private String paymentOriginationCountry;
+    @XmlElement(name = "sender")
+    private Sender sender;
 
-        @XmlElement(name = "payment_type")
-        private String paymentType;
+    @XmlElement(name = "recipient")
+    private Recipient recipient;
 
-        @XmlElement(name = "sender")
-        private Sender sender;
+    @XmlElement(name = "purpose_of_payment")
+    private String purposeOfPayment;
 
-        @XmlElement(name = "recipient")
-        private Recipient recipient;
-
-        @XmlElement(name = "purpose_of_payment")
-        private String purposeOfPayment;
-
-        @XmlElement(name = "additional_data")
-        private AdditionalData additionalData;
-    }
+    @XmlElement(name = "additional_data")
+    private AdditionalData additionalData;
 
     @Data
     @Builder
