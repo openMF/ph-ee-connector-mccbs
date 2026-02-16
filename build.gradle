@@ -21,6 +21,8 @@ repositories {
 ext {
     zeebeVersion = '8.4.0'
     jacksonVersion = '2.15.3'
+    oauth1SignerVersion = '1.5.3'
+    nimbusJoseJwtVersion = '9.37.3'
 }
 
 dependencies {
@@ -46,6 +48,16 @@ dependencies {
 
     // Apache Commons
     implementation 'org.apache.commons:commons-lang3'
+
+    // Mastercard OAuth1 Signing
+    implementation "com.mastercard.developer:oauth1-signer:${oauth1SignerVersion}"
+
+    // JWE Encryption (Nimbus JOSE + JWT)
+    implementation "com.nimbusds:nimbus-jose-jwt:${nimbusJoseJwtVersion}"
+
+    // JAXB for XML Support (required for Mastercard CBS API)
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.0'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:4.0.2'
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
