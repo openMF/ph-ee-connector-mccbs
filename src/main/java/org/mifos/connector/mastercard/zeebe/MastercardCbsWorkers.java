@@ -264,9 +264,21 @@ public class MastercardCbsWorkers {
             variables.put("paymentSuccess", true);
             variables.put("cbsPaymentId", response.getPaymentId());
             variables.put("cbsPaymentStatus", response.getStatus());
+            variables.put("cbsTransactionReference", response.getTransactionReference());
 
-            log.info("[GovStack] CBS payment submitted successfully. Transaction: {}, Payment ID: {}, Status: {}",
-                    transactionId, response.getPaymentId(), response.getStatus());
+            // Log success with full details
+            log.info("[GovStack] ════════════════════════════════════════════════════════════");
+            log.info("[GovStack] ✓ CBS PAYMENT SUBMITTED SUCCESSFULLY");
+            log.info("[GovStack] ════════════════════════════════════════════════════════════");
+            log.info("[GovStack]   Transaction ID        : {}", transactionId);
+            log.info("[GovStack]   Payment ID (CBS)      : {}", response.getPaymentId());
+            log.info("[GovStack]   Status                : {}", response.getStatus());
+            log.info("[GovStack]   Transaction Reference : {}", response.getTransactionReference());
+            log.info("[GovStack]   Payee Account         : {}", payeeAccountNumber);
+            log.info("[GovStack]   Amount                : {} {}", amount, currency);
+            log.info("[GovStack]   Beneficiary           : {} {}",
+                    suppData.getRecipientFirstName(), suppData.getRecipientLastName());
+            log.info("[GovStack] ════════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
             log.error("[GovStack] Error initiating CBS payment for transaction: {}", transactionId, e);

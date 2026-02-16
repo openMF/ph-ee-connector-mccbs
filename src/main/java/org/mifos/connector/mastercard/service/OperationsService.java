@@ -37,7 +37,8 @@ public class OperationsService {
                                         String tenantId) {
 
         if (!operationsConfig.getApi().getEnabled()) {
-            log.debug("Operations API integration disabled, skipping update for transaction: {}", transactionId);
+            log.info("[OperationsDB] Integration disabled - skipping update for transaction: {} (status={}, externalId={})",
+                    transactionId, status, externalId);
             return true;
         }
 
@@ -64,9 +65,9 @@ public class OperationsService {
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
-            log.info("Updating operations DB for transaction: {}, status: {}, externalId: {}",
-                    transactionId, status, externalId);
-            log.debug("Operations API request: POST {} with body: {}", url, requestBody);
+            log.info("[OperationsDB] Updating transfer status - transaction: {}, status: {}, externalId: {}, tenant: {}",
+                    transactionId, status, externalId, tenantId);
+            log.debug("[OperationsDB] API request: POST {} with body: {}", url, requestBody);
 
             ResponseEntity<String> response = restTemplate.exchange(
                     url,
@@ -76,17 +77,36 @@ public class OperationsService {
             );
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("Successfully updated operations DB for transaction: {}, response: {}",
+                log.info("[OperationsDB] ✓ Successfully updated operations DB for transaction: {}, HTTP status: {}",
                         transactionId, response.getStatusCode());
                 return true;
             } else {
-                log.warn("Operations DB update returned non-success status for transaction: {}, status: {}",
+                log.warn("[OperationsDB] ✗ Update returned non-success status for transaction: {}, HTTP status: {}",
                         transactionId, response.getStatusCode());
                 return false;
             }
 
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // Connection refused or network error - operations-app may not be deployed
+            log.warn("[OperationsDB] ⚠ Operations-app API unreachable for transaction: {} (Connection refused: {}). " +
+                    "Payment completed successfully, but status not recorded in operations DB. " +
+                    "This is normal if operations-app is not deployed.",
+                    transactionId, e.getMessage());
+            log.info("[OperationsDB] Payment details - status: {}, externalId: {}, statusDetails: {}",
+                    status, externalId, statusDetails);
+            return true; // Return true to not block the workflow
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // 4xx error - client error (transfer not found, bad request, etc.)
+            log.error("[OperationsDB] ✗ Client error updating transaction: {}, HTTP status: {}, response body: {}",
+                    transactionId, e.getStatusCode(), e.getResponseBodyAsString());
+            return false;
+        } catch (org.springframework.web.client.HttpServerErrorException e) {
+            // 5xx error - server error
+            log.error("[OperationsDB] ✗ Server error updating transaction: {}, HTTP status: {}, response body: {}",
+                    transactionId, e.getStatusCode(), e.getResponseBodyAsString());
+            return false;
         } catch (Exception e) {
-            log.error("Error updating operations DB for transaction: {}", transactionId, e);
+            log.error("[OperationsDB] ✗ Unexpected error updating transaction: {}", transactionId, e);
             return false;
         }
     }

@@ -16,6 +16,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 
 @Slf4j
@@ -88,12 +89,29 @@ public class MastercardPaymentService {
 
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                     PaymentResponseXml xmlResponse = response.getBody();
-                    log.info("CBS payment submitted successfully (XML unencrypted). Payment ID: {}, Status: {}",
-                            xmlResponse.getId(), xmlResponse.getStatus());
+
+                    // Log comprehensive response details
+                    log.info("════════════════════════════════════════════════════════════════");
+                    log.info("✓ MASTERCARD CBS PAYMENT SUCCESS (XML Unencrypted)");
+                    log.info("════════════════════════════════════════════════════════════════");
+                    log.info("  Transaction Reference : {}", xmlResponse.getTransactionReference());
+                    log.info("  Mastercard Payment ID : {}", xmlResponse.getId());
+                    log.info("  Status                : {}", xmlResponse.getStatus());
+                    log.info("  Resource Type         : {}", xmlResponse.getResourceType());
+                    log.info("  Created               : {}", xmlResponse.getCreated());
+                    log.info("  Status Timestamp      : {}", xmlResponse.getStatusTimestamp());
+                    log.info("  HTTP Status           : {}", response.getStatusCode());
+                    log.info("════════════════════════════════════════════════════════════════");
 
                     // Convert XML response to internal format
                     return convertXmlToJsonResponse(xmlResponse);
                 } else {
+                    log.error("════════════════════════════════════════════════════════════════");
+                    log.error("✗ MASTERCARD CBS PAYMENT FAILED");
+                    log.error("════════════════════════════════════════════════════════════════");
+                    log.error("  HTTP Status: {}", response.getStatusCode());
+                    log.error("  Response Body: {}", response.getBody());
+                    log.error("════════════════════════════════════════════════════════════════");
                     throw new RuntimeException("Payment submission failed: " + response.getStatusCode());
                 }
             }
@@ -405,10 +423,21 @@ public class MastercardPaymentService {
     }
 
     private MastercardPaymentResponse convertXmlToJsonResponse(PaymentResponseXml xmlResponse) {
+        // Convert created timestamp if present
+        LocalDateTime createdTimestamp = null;
+        if (xmlResponse.getCreated() != null) {
+            try {
+                createdTimestamp = LocalDateTime.parse(xmlResponse.getCreated().replace("Z", ""));
+            } catch (Exception e) {
+                log.warn("Could not parse created timestamp: {}", xmlResponse.getCreated());
+            }
+        }
+
         return MastercardPaymentResponse.builder()
                 .paymentId(xmlResponse.getId())
                 .status(xmlResponse.getStatus())
                 .transactionReference(xmlResponse.getTransactionReference())
+                .createdTimestamp(createdTimestamp)
                 .build();
     }
 
