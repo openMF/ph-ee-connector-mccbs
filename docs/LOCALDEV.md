@@ -20,7 +20,7 @@ When `spec.localdev.enabled: true` is set in the Custom Resource:
 Apply the localdev Custom Resource:
 
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-localdev.yaml
 ```
 
 This CR has:
@@ -85,12 +85,12 @@ kubectl logs -n mastercard-demo -l app=ph-ee-connector-mastercard-cbs -f | grep 
 
 ### To LocalDev:
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-localdev.yaml
 ```
 
 ### To Production:
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-default.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-default.yaml
 ```
 
 ### Or Edit In-Place:
@@ -243,7 +243,7 @@ spec:
 
 2. Apply updated CR:
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-localdev.yaml
 ```
 
 ## Simulator LocalDev Support
@@ -326,7 +326,7 @@ sudo ./run.sh -a mastercard-demo
 Or apply the localdev Custom Resource manually after deployment:
 
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-localdev.yaml
 ```
 
 ## Why Not Use localdev.py?
@@ -369,7 +369,7 @@ cd ~/mifos-gazelle/src/utils/localdev
 
 **Setup:**
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-localdev.yaml
 ```
 
 **Result:**
@@ -380,7 +380,7 @@ kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-
 
 **Revert:**
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-default.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-default.yaml
 ```
 
 ### Advantages of Operator-Based LocalDev
@@ -402,7 +402,7 @@ kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-
 **Workflow:**
 ```bash
 # One-time setup
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-localdev.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-localdev.yaml
 
 # Development loop
 edit code → ./gradlew bootJar → kubectl delete pod -n mastercard-demo -l app=ph-ee-connector-mastercard-cbs
@@ -410,7 +410,7 @@ edit code → ./gradlew bootJar → kubectl delete pod -n mastercard-demo -l app
 
 **Return to Production:**
 ```bash
-kubectl apply -f ~/ph-ee-connector-mccbs/operator/config/samples/mastercard-cbs-default.yaml
+kubectl apply -f ~/mifos-gazelle/src/operators/mastercard/config/samples/mastercard-cbs-default.yaml
 ```
 
 ---

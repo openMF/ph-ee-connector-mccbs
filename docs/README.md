@@ -237,12 +237,16 @@ SELECT COUNT(*) FROM mastercard_cbs_supplementary_data WHERE is_active = true;
 ph-ee-connector-mccbs/
 ├── docs/                      # Documentation (this directory)
 ├── src/                       # Java source code
-│   ├── main/java/             # Application code
-│   └── utils/data-loading/    # Database scripts and data loaders
+│   └── main/java/             # Application code
 ├── orchestration/             # BPMN workflows
-├── operator/                  # Kubernetes operator
 ├── build.gradle               # Gradle build configuration
 └── Dockerfile                 # Container image build
+
+# Operator and utilities are in mifos-gazelle deployment repo
+mifos-gazelle/
+└── src/
+    ├── operators/mastercard/  # Kubernetes operator for deployment
+    └── utils/mastercard/      # Data loading and verification scripts
 ```
 
 ## License

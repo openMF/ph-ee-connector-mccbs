@@ -22,6 +22,12 @@ gradle bootRun
 gradle test
 ```
 
+## boot run and mifs gazelle integration 
+- use sudo ./run.sh -a mastercard-demo to deploy or redeploy  from mifos gazelle 
+- use ./submit-batch.py -c ~/tomconfig.ini -f bulk-gazelle-mastercard-6.csv --tenant greenbank --govstack --registering-institution greenbank to test 
+- use ./src/utils/data-loading/load-mastercard-supplementary-data.sh for loading the supplementary data as specified in ../docs/JIRA_REQUIREMENTS.md 
+
+
 ## Architecture
 
 ### Zeebe Workers
@@ -76,3 +82,5 @@ zbctl create instance bulk_connector_mastercard_cbs-DFSPID \
 curl http://localhost:8080/actuator/health
 curl http://localhost:8080/actuator/metrics
 ```
+## GIT
+- do not put Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com> in the git commit log

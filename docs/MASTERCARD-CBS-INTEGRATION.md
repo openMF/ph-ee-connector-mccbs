@@ -76,9 +76,9 @@ Before deploying Mastercard CBS:
    sudo ./run.sh -a "infra phee"
    ```
 
-2. **CBS connector repository must exist**:
+2. **Operator files must exist** (in mifos-gazelle):
    ```bash
-   ls ~/ph-ee-connector-mccbs/operator/
+   ls ~/mifos-gazelle/src/operators/mastercard/
    ```
 
 3. **Docker must be available** for building images
@@ -149,7 +149,7 @@ kubectl create namespace mastercard-demo
 ### 3. Deploy Kubernetes Operator
 
 ```bash
-cd ~/ph-ee-connector-mccbs/operator
+cd ~/mifos-gazelle/src/operators/mastercard
 ./deploy-operator.sh deploy
 ```
 
@@ -466,22 +466,27 @@ mifos-gazelle/
     └── GOVSTACK.md                         # G2P architecture
 
 ~/ph-ee-connector-mccbs/
-├── operator/
-│   ├── config/
-│   │   ├── crd/                            # Custom Resource Definition
-│   │   ├── rbac/                           # Service account, roles
-│   │   └── samples/                        # Sample CRs
-│   ├── controllers/
-│   │   └── reconcile.sh                    # Operator controller logic
-│   └── deploy-operator.sh                  # Operator deployment script
 ├── src/
-│   ├── main/java/                          # CBS connector code
-│   └── utils/data-loading/                 # Database schema, scripts
+│   └── main/java/                          # CBS connector code
 ├── orchestration/                          # BPMN workflows
 └── docs/
     ├── OPERATOR_DEPLOYMENT_GUIDE.md        # Operator usage guide
     ├── INTEGRATION_QUICKSTART.md           # Quick integration guide
     └── JIRA_REQUIREMENTS_ANALYSIS.md       # Requirements analysis
+
+~/mifos-gazelle/
+├── src/
+│   ├── operators/
+│   │   └── mastercard/
+│   │       ├── config/
+│   │       │   ├── crd/                    # Custom Resource Definition
+│   │       │   ├── rbac/                   # Service account, roles
+│   │       │   └── samples/                # Sample CRs
+│   │       ├── controllers/
+│   │       │   └── reconcile.sh            # Operator controller logic
+│   │       └── deploy-operator.sh          # Operator deployment script
+│   └── utils/
+│       └── mastercard/                     # Data loading and verification scripts
 ```
 
 ## Summary
