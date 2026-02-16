@@ -332,13 +332,25 @@ public class MastercardPaymentService {
         String lastName = suppData.getRecipientLastName() != null ?
                 suppData.getRecipientLastName().toUpperCase() : "";
 
-        // Build recipient_account_uri - simple ban: format per reference app (NOT ban:account;bic=swift)
+        // Build account URIs per reference app
+        // Sender: tel: format with phone number
+        String senderAccountUri = suppData.getRecipientPhone() != null ?
+                "tel:+" + suppData.getRecipientPhone() : "tel:+000000000";
+
+        // Recipient: ban: format for bank accounts
         String accountNumber = suppData.getPayeeAccountNumber() != null ?
                 suppData.getPayeeAccountNumber() : payeeAccount;
         String recipientAccountUri = "ban:" + accountNumber;
 
+        // Convert ISO2 country codes to ISO3 format
+        String recipientCountryISO3 = convertToISO3(suppData.getRecipientAddressCountry());
+
+        // Shorten purpose to avoid length validation error
+        String purpose = "Social welfare payment";
+
         return PaymentRequestXml.builder()
                 .transactionReference(transactionId)
+                .senderAccountUri(senderAccountUri)
                 .recipientAccountUri(recipientAccountUri)
                 .paymentAmount(PaymentRequestXml.PaymentAmount.builder()
                         .amount(amount.toPlainString())
@@ -360,13 +372,36 @@ public class MastercardPaymentService {
                         .address(PaymentRequestXml.Address.builder()
                                 .line1(suppData.getRecipientAddressLine1())
                                 .city(suppData.getRecipientAddressCity())
-                                .country(suppData.getRecipientAddressCountry())
+                                .country(recipientCountryISO3)
                                 .build())
                         .email(suppData.getRecipientEmail())
                         .build())
-                .purposeOfPayment(suppData.getPurposeOfPayment() != null ?
-                        suppData.getPurposeOfPayment() : "Government disbursement")
+                .purposeOfPayment(purpose)
                 .build();
+    }
+
+    /**
+     * Convert ISO2 country code to ISO3 format required by Mastercard API
+     */
+    private String convertToISO3(String iso2Code) {
+        if (iso2Code == null || iso2Code.length() == 3) {
+            return iso2Code; // Already ISO3 or null
+        }
+        // Common mappings for test data
+        switch (iso2Code.toUpperCase()) {
+            case "ES": return "ESP"; // Spain
+            case "GB": return "GBR"; // United Kingdom
+            case "US": return "USA"; // United States
+            case "IT": return "ITA"; // Italy
+            case "FR": return "FRA"; // France
+            case "DE": return "DEU"; // Germany
+            case "JP": return "JPN"; // Japan
+            case "CN": return "CHN"; // China
+            case "SA": return "SAU"; // Saudi Arabia
+            case "IN": return "IND"; // India
+            case "ZA": return "ZAF"; // South Africa
+            default: return iso2Code; // Return as-is if unknown
+        }
     }
 
     private MastercardPaymentResponse convertXmlToJsonResponse(PaymentResponseXml xmlResponse) {

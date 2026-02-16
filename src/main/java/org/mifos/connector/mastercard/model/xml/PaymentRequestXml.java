@@ -24,6 +24,9 @@ public class PaymentRequestXml {
     @XmlElement(name = "transaction_reference")
     private String transactionReference;
 
+    @XmlElement(name = "sender_account_uri")
+    private String senderAccountUri;
+
     @XmlElement(name = "recipient_account_uri")
     private String recipientAccountUri;
 
