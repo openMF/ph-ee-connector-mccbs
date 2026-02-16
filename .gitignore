@@ -33,3 +33,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Mastercard CBS Certificates and Keys (NEVER COMMIT!) ###
+src/main/resources/certs/*.p12
+src/main/resources/certs/*.pem
+src/main/resources/certs/*.crt
+src/main/resources/certs/*.key

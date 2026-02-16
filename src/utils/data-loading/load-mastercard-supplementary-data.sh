@@ -220,6 +220,35 @@ map_institution_to_country() {
     esac
 }
 
+# Generate IBAN-formatted account number for testing
+# Format: CountryCode(2) + CheckDigits(2) + BankCode(4) + AccountNumber(14)
+generate_test_iban() {
+    local country=$1
+    local msisdn=$2
+
+    # Generate deterministic but unique account number from MSISDN
+    local hash=$(echo -n "$msisdn" | cksum | cut -d' ' -f1)
+    local account_num=$(printf "%014d" $((hash % 100000000000000)))
+
+    # Generate check digits (simplified - just use last 2 digits of hash)
+    local check_digits=$(printf "%02d" $((hash % 100)))
+
+    # Bank code - use first 4 chars of country-specific pattern
+    case "$country" in
+        US) echo "US${check_digits}BANK${account_num}" ;;       # US format (not true IBAN but similar)
+        GB) echo "GB${check_digits}BARC${account_num}" ;;       # UK IBAN
+        ES) echo "ES${check_digits}2100${account_num}" ;;       # Spain IBAN
+        IT) echo "IT${check_digits}X0542811101${account_num:0:12}" ;;  # Italy IBAN
+        FR) echo "FR${check_digits}20041010050${account_num:0:11}" ;;  # France IBAN
+        DE) echo "DE${check_digits}37040044${account_num:0:10}" ;;     # Germany IBAN
+        JP) echo "JP${check_digits}MUFG${account_num}" ;;       # Japan format
+        CN) echo "CN${check_digits}ICBC${account_num}" ;;       # China format
+        SA) echo "SA${check_digits}80000${account_num:0:18}" ;;  # Saudi Arabia IBAN
+        IN) echo "IN${check_digits}HDFC${account_num}" ;;       # India format
+        *) echo "${country}${check_digits}BANK${account_num}" ;; # Generic format
+    esac
+}
+
 # Get bank data for country
 get_bank_data() {
     local country=$1
@@ -350,11 +379,12 @@ CREATE_TABLE_SQL="CREATE TABLE IF NOT EXISTS mastercard_cbs_supplementary_data (
     beneficiary_currency VARCHAR(3) NOT NULL DEFAULT 'ZAR',
     beneficiary_currency_decimal_precision INT NOT NULL DEFAULT 2,
     destination_service_tag VARCHAR(20) NOT NULL DEFAULT 'ZAK-BK',
-    payment_type VARCHAR(10) NOT NULL DEFAULT 'B2P',
+    payment_type VARCHAR(10) NOT NULL DEFAULT 'G2P',
     -- Variable fields based on account details (per PHEE-351)
     recipient_first_name VARCHAR(100),
     recipient_last_name VARCHAR(100),
     recipient_address_line1 VARCHAR(255),
+    recipient_address_city VARCHAR(100),
     recipient_phone VARCHAR(20),
     recipient_email VARCHAR(255),
     recipient_address_country VARCHAR(3),
@@ -392,7 +422,7 @@ if [[ "$DEBUG" == "true" ]]; then
     echo "│   beneficiary_currency                VARCHAR(3)   DEFAULT 'ZAR'"
     echo "│   beneficiary_currency_decimal_precision INT       DEFAULT 2"
     echo "│   destination_service_tag             VARCHAR(20)  DEFAULT 'ZAK-BK'"
-    echo "│   payment_type                        VARCHAR(10)  DEFAULT 'B2P'"
+    echo "│   payment_type                        VARCHAR(10)  DEFAULT 'G2P'"
     echo "│"
     echo "│ NOTE: All 9 static fields from PHEE-351 specification present"
     echo "│"
@@ -400,6 +430,7 @@ if [[ "$DEBUG" == "true" ]]; then
     echo "│   recipient_first_name                VARCHAR(100)"
     echo "│   recipient_last_name                 VARCHAR(100)"
     echo "│   recipient_address_line1             VARCHAR(255)"
+    echo "│   recipient_address_city              VARCHAR(100)"
     echo "│   recipient_phone                     VARCHAR(20)"
     echo "│   recipient_email                     VARCHAR(255)"
     echo "│   recipient_address_country           VARCHAR(3)"
@@ -513,6 +544,9 @@ while IFS=$'\t' read -r msisdn account institution; do
     # Map institution to country
     country=$(map_institution_to_country "$institution")
 
+    # Generate IBAN-formatted account number for Mastercard CBS API
+    iban_account=$(generate_test_iban "$country" "$msisdn")
+
     # Get random bank, name, city for this country
     bank_data=$(get_bank_data "$country")
     bank_name=$(echo "$bank_data" | cut -d'|' -f1)
@@ -540,6 +574,7 @@ while IFS=$'\t' read -r msisdn account institution; do
         recipient_first_name,
         recipient_last_name,
         recipient_address_line1,
+        recipient_address_city,
         recipient_address_country,
         recipient_phone,
         recipient_email,
@@ -551,10 +586,11 @@ while IFS=$'\t' read -r msisdn account institution; do
         created_by
     ) VALUES (
         '$msisdn',
-        '$account',
+        '$iban_account',
         '$first_name',
         '$last_name',
         '$address',
+        '$city',
         '$country',
         '$msisdn',
         '$email',
@@ -587,14 +623,15 @@ while IFS=$'\t' read -r msisdn account institution; do
         echo "│   beneficiary_currency            = (default: ZAR)"
         echo "│   beneficiary_currency_decimal_precision = (default: 2)"
         echo "│   destination_service_tag         = (default: ZAK-BK)"
-        echo "│   payment_type                    = (default: B2P)"
+        echo "│   payment_type                    = (default: G2P)"
         echo "│"
         echo "│ VARIABLE FIELDS (per beneficiary):"
         echo "│   payee_msisdn                = $msisdn"
-        echo "│   payee_account_number        = $account"
+        echo "│   payee_account_number        = $iban_account (IBAN format)"
         echo "│   recipient_first_name        = $first_name"
         echo "│   recipient_last_name         = $last_name"
         echo "│   recipient_address_line1     = $address"
+        echo "│   recipient_address_city      = $city"
         echo "│   recipient_address_country   = $country"
         echo "│   recipient_phone             = $msisdn"
         echo "│   recipient_email             = $email"

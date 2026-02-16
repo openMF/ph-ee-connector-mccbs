@@ -23,6 +23,12 @@ public class MastercardConfig {
     private OAuthConfig oauth = new OAuthConfig();
 
     @NotNull
+    private OAuth1Config oauth1 = new OAuth1Config();
+
+    @NotNull
+    private EncryptionConfig encryption = new EncryptionConfig();
+
+    @NotNull
     private PaymentConfig payment = new PaymentConfig();
 
     @NotNull
@@ -54,6 +60,40 @@ public class MastercardConfig {
         private String grantType = "client_credentials";
 
         private Integer tokenCacheSeconds = 3000;
+    }
+
+    @Getter
+    @Setter
+    public static class OAuth1Config {
+        @NotBlank
+        private String consumerKey;
+
+        @NotBlank
+        private String signingKeyFile;
+
+        @NotBlank
+        private String signingKeyAlias;
+
+        @NotBlank
+        private String signingKeyPassword;
+    }
+
+    @Getter
+    @Setter
+    public static class EncryptionConfig {
+        private Boolean enabled = false;
+
+        private String certificateFile;
+
+        private String certificatePassword;
+
+        private String fingerPrint;
+
+        private String decryptionKeyFile;
+
+        private String decryptionKeyAlias;
+
+        private String decryptionKeyPassword;
     }
 
     @Getter

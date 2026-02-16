@@ -326,15 +326,21 @@ public class MastercardPaymentService {
             String currency,
             SupplementaryData suppData) {
 
-        // Build recipient name
-        String firstName = suppData.getRecipientFirstName() != null ? suppData.getRecipientFirstName() : "";
-        String lastName = suppData.getRecipientLastName() != null ? suppData.getRecipientLastName() : "";
+        // Build recipient name - UPPERCASE per reference app
+        String firstName = suppData.getRecipientFirstName() != null ?
+                suppData.getRecipientFirstName().toUpperCase() : "";
+        String lastName = suppData.getRecipientLastName() != null ?
+                suppData.getRecipientLastName().toUpperCase() : "";
+
+        // Build recipient_account_uri - simple ban: format per reference app (NOT ban:account;bic=swift)
+        String accountNumber = suppData.getPayeeAccountNumber() != null ?
+                suppData.getPayeeAccountNumber() : payeeAccount;
+        String recipientAccountUri = "ban:" + accountNumber;
 
         return PaymentRequestXml.builder()
                 .paymentRequest(PaymentRequestXml.PaymentRequestDetail.builder()
                         .transactionReference(transactionId)
-                        .recipientAccountUri(suppData.getPayeeAccountNumber() != null ?
-                                suppData.getPayeeAccountNumber() : payeeAccount)
+                        .recipientAccountUri(recipientAccountUri)
                         .paymentAmount(PaymentRequestXml.PaymentAmount.builder()
                                 .amount(amount.toPlainString())
                                 .currency(currency)
@@ -354,8 +360,10 @@ public class MastercardPaymentService {
                                 .lastName(lastName)
                                 .address(PaymentRequestXml.Address.builder()
                                         .line1(suppData.getRecipientAddressLine1())
+                                        .city(suppData.getRecipientAddressCity())
                                         .country(suppData.getRecipientAddressCountry())
                                         .build())
+                                .email(suppData.getRecipientEmail())
                                 .build())
                         .purposeOfPayment(suppData.getPurposeOfPayment() != null ?
                                 suppData.getPurposeOfPayment() : "Government disbursement")

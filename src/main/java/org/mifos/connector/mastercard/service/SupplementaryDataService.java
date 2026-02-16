@@ -97,6 +97,7 @@ public class SupplementaryDataService {
                     .recipientFirstName(rs.getString("recipient_first_name"))
                     .recipientLastName(rs.getString("recipient_last_name"))
                     .recipientAddressLine1(rs.getString("recipient_address_line1"))
+                    .recipientAddressCity(rs.getString("recipient_address_city"))
                     .recipientAddressCountry(rs.getString("recipient_address_country"))
                     .recipientPhone(rs.getString("recipient_phone"))
                     .recipientEmail(rs.getString("recipient_email"))

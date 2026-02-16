@@ -334,6 +334,30 @@ deploy_connector() {
     local db_host
     db_host=$(echo "$cr_json" | jq -r '.spec.paymenthub.operationsDb.host // "operationsmysql.paymenthub.svc.cluster.local"')
 
+    # Read OAuth1 and encryption settings from config file
+    local mastercard_consumer_key=""
+    local mastercard_partner_id=""
+    local mastercard_signing_key_alias=""
+    local mastercard_signing_key_password=""
+    local mastercard_encryption_enabled="false"
+    local mastercard_encryption_cert_password=""
+    local mastercard_encryption_fingerprint=""
+    local mastercard_decryption_key_alias=""
+    local mastercard_decryption_key_password=""
+
+    if [ -n "$config_file" ] && [ -f "$config_file" ]; then
+        # Simple INI parser using sed/awk (crudini not available in kubectl image)
+        mastercard_consumer_key=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_CONSUMER_KEY" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "")
+        mastercard_partner_id=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_PARTNER_ID" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "mifos-paymenthub-cbs-connector")
+        mastercard_signing_key_alias=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_SIGNING_KEY_ALIAS" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "keyalias")
+        mastercard_signing_key_password=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_SIGNING_KEY_PASSWORD" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "keystorepassword")
+        mastercard_encryption_enabled=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_ENCRYPTION_ENABLED" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "false")
+        mastercard_encryption_cert_password=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_ENCRYPTION_CERT_PASSWORD" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "keystorepassword")
+        mastercard_encryption_fingerprint=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_ENCRYPTION_FINGERPRINT" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "")
+        mastercard_decryption_key_alias=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_DECRYPTION_KEY_ALIAS" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "keyalias")
+        mastercard_decryption_key_password=$(sed -n '/^\[mastercard-demo\]/,/^\[/p' "$config_file" | grep "^MASTERCARD_DECRYPTION_KEY_PASSWORD" | cut -d'=' -f2- | sed 's/^ *//;s/ *$//' || echo "keystorepassword")
+    fi
+
     kubectl apply -n "$namespace" -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
@@ -369,6 +393,24 @@ ${command_section}
           value: "${mastercard_api_url}"
         - name: MASTERCARD_AUTH_URL
           value: "${mastercard_api_url}/oauth/token"
+        - name: MASTERCARD_PARTNER_ID
+          value: "${mastercard_partner_id}"
+        - name: MASTERCARD_CONSUMER_KEY
+          value: "${mastercard_consumer_key}"
+        - name: MASTERCARD_SIGNING_KEY_ALIAS
+          value: "${mastercard_signing_key_alias}"
+        - name: MASTERCARD_SIGNING_KEY_PASSWORD
+          value: "${mastercard_signing_key_password}"
+        - name: MASTERCARD_ENCRYPTION_ENABLED
+          value: "${mastercard_encryption_enabled}"
+        - name: MASTERCARD_ENCRYPTION_CERT_PASSWORD
+          value: "${mastercard_encryption_cert_password}"
+        - name: MASTERCARD_ENCRYPTION_FINGERPRINT
+          value: "${mastercard_encryption_fingerprint}"
+        - name: MASTERCARD_DECRYPTION_KEY_ALIAS
+          value: "${mastercard_decryption_key_alias}"
+        - name: MASTERCARD_DECRYPTION_KEY_PASSWORD
+          value: "${mastercard_decryption_key_password}"
         - name: DATASOURCE_URL
           value: "jdbc:mysql://${db_host}:3306/operations"
         - name: DATASOURCE_USERNAME
@@ -415,8 +457,9 @@ deploy_workflow() {
 
     log_info "Deploying BPMN workflows to Zeebe for all tenants..."
 
-    local workflow_template="$HOME/ph-ee-connector-mccbs/orchestration/MastercardFundTransfer-DFSPID.bpmn"
-    local deploy_script="$HOME/mifos-gazelle/src/utils/deployBpmn-gazelle.sh"
+    # Use /home/tdaly instead of $HOME since operator container has HOME=/tmp
+    local workflow_template="/home/tdaly/ph-ee-connector-mccbs/orchestration/MastercardFundTransfer-DFSPID.bpmn"
+    local deploy_script="/home/tdaly/mifos-gazelle/src/utils/deployBpmn-gazelle.sh"
 
     # Deploy using deployBpmn-gazelle.sh script (it handles multiple tenants)
     if [ -f "$deploy_script" ]; then
