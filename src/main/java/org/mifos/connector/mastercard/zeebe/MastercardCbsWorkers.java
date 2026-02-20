@@ -300,10 +300,23 @@ public class MastercardCbsWorkers {
             @Variable(name = "cbsPaymentId") String cbsPaymentId,
             @Variable(name = "cbsPaymentStatus") String cbsPaymentStatus,
             @Variable(name = "paymentSuccess") Boolean paymentSuccess,
+            @Variable(name = "batchId") String batchId,
+            @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData,
             String tenantId) {
 
-        log.info("[GovStack] Updating operations DB for transaction: {}, success: {}, status: {}, tenant: {}",
-                transactionId, paymentSuccess, cbsPaymentStatus, tenantId);
+        log.info("[GovStack] Updating operations DB for transaction: {}, success: {}, status: {}, tenant: {}, batchId: {}",
+                transactionId, paymentSuccess, cbsPaymentStatus, tenantId, batchId);
+
+        // Extract amount and currency from mergedPaymentData if available
+        BigDecimal amount = null;
+        String currency = null;
+        if (mergedPaymentData != null) {
+            Object amountObj = mergedPaymentData.get("amount");
+            if (amountObj != null) {
+                amount = convertToBigDecimal(amountObj);
+            }
+            currency = (String) mergedPaymentData.get("currency");
+        }
 
         Map<String, Object> variables = new HashMap<>();
 
@@ -323,7 +336,10 @@ public class MastercardCbsWorkers {
                     transferStatus,
                     cbsPaymentId,
                     statusDetails,
-                    tenantId
+                    tenantId,
+                    batchId,
+                    amount,
+                    currency
             );
 
             if (updateSuccess) {
