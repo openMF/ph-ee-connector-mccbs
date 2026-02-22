@@ -39,3 +39,6 @@ src/main/resources/certs/*.p12
 src/main/resources/certs/*.pem
 src/main/resources/certs/*.crt
 src/main/resources/certs/*.key
+
+## Claude and other AI related files ###
+CLAUDE*md 
