@@ -302,6 +302,8 @@ public class MastercardCbsWorkers {
             @Variable(name = "paymentSuccess") Boolean paymentSuccess,
             @Variable(name = "batchId") String batchId,
             @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData,
+            @Variable(name = "channelRequest") String channelRequest,
+            @Variable(name = "supplementaryData") Map<String, Object> suppDataMap,
             String tenantId) {
 
         log.info("[GovStack] Updating operations DB for transaction: {}, success: {}, status: {}, tenant: {}, batchId: {}",
@@ -317,6 +319,45 @@ public class MastercardCbsWorkers {
             }
             currency = (String) mergedPaymentData.get("currency");
         }
+
+        // Extract payer/payee party identifiers from channelRequest
+        String payeePartyId = null;
+        String payeePartyIdType = null;
+        String payerPartyId = null;
+        String payerPartyIdType = null;
+        if (channelRequest != null) {
+            try {
+                Map<String, Object> requestMap = objectMapper.readValue(channelRequest, Map.class);
+                Map<String, Object> payee = (Map<String, Object>) requestMap.get("payee");
+                if (payee != null) {
+                    Map<String, Object> payeeInfo = (Map<String, Object>) payee.get("partyIdInfo");
+                    if (payeeInfo != null) {
+                        payeePartyId = (String) payeeInfo.get("partyIdentifier");
+                        payeePartyIdType = (String) payeeInfo.get("partyIdType");
+                    }
+                }
+                Map<String, Object> payer = (Map<String, Object>) requestMap.get("payer");
+                if (payer != null) {
+                    Map<String, Object> payerInfo = (Map<String, Object>) payer.get("partyIdInfo");
+                    if (payerInfo != null) {
+                        payerPartyId = (String) payerInfo.get("partyIdentifier");
+                        payerPartyIdType = (String) payerInfo.get("partyIdType");
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[GovStack] Could not parse channelRequest for party IDs, transaction: {}: {}", transactionId, e.getMessage());
+            }
+        }
+
+        // Extract payee DFSP ID from supplementary data (bank SWIFT code as routing identifier)
+        String payeeDfspId = null;
+        if (suppDataMap != null) {
+            Object swiftCode = suppDataMap.get("bank_swift_code");
+            if (swiftCode == null) swiftCode = suppDataMap.get("bankSwiftCode");
+            if (swiftCode != null) payeeDfspId = swiftCode.toString();
+        }
+        // Payer DFSP is the tenant itself
+        String payerDfspId = tenantId;
 
         Map<String, Object> variables = new HashMap<>();
 
@@ -339,7 +380,13 @@ public class MastercardCbsWorkers {
                     tenantId,
                     batchId,
                     amount,
-                    currency
+                    currency,
+                    payeePartyId,
+                    payeePartyIdType,
+                    payerPartyId,
+                    payerPartyIdType,
+                    payeeDfspId,
+                    payerDfspId
             );
 
             if (updateSuccess) {

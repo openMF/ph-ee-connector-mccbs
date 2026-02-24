@@ -36,8 +36,8 @@ zeebe:
 # Mastercard CBS Configuration
 mastercard:
   api:
-    url: ${MASTERCARD_API_URL:http://mastercard-simulator.mastercard-demo.svc.cluster.local:8080}
-    auth-url: ${MASTERCARD_AUTH_URL:http://mastercard-simulator.mastercard-demo.svc.cluster.local:8080/oauth/token}
+    url: ${MASTERCARD_API_URL:https://sandbox.api.mastercard.com}
+    auth-url: ${MASTERCARD_AUTH_URL:https://sandbox.api.mastercard.com/oauth/token}
     partner-id: ${MASTERCARD_PARTNER_ID:MIFOS_GOVSTACK}
 
   oauth:

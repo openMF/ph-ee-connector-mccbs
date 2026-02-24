@@ -53,8 +53,10 @@ public class MultiTenantWorkerConfig {
             @Variable(name = "cbsPaymentStatus") String cbsPaymentStatus,
             @Variable(name = "paymentSuccess") Boolean paymentSuccess,
             @Variable(name = "batchId") String batchId,
-            @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData) {
-        return workers.updateOperationsGovStack(transactionId, cbsPaymentId, cbsPaymentStatus, paymentSuccess, batchId, mergedPaymentData, "greenbank");
+            @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData,
+            @Variable(name = "channelRequest") String channelRequest,
+            @Variable(name = "supplementaryData") Map<String, Object> supplementaryData) {
+        return workers.updateOperationsGovStack(transactionId, cbsPaymentId, cbsPaymentStatus, paymentSuccess, batchId, mergedPaymentData, channelRequest, supplementaryData, "greenbank");
     }
 
     // Redbank tenant workers
@@ -88,8 +90,10 @@ public class MultiTenantWorkerConfig {
             @Variable(name = "cbsPaymentStatus") String cbsPaymentStatus,
             @Variable(name = "paymentSuccess") Boolean paymentSuccess,
             @Variable(name = "batchId") String batchId,
-            @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData) {
-        return workers.updateOperationsGovStack(transactionId, cbsPaymentId, cbsPaymentStatus, paymentSuccess, batchId, mergedPaymentData, "redbank");
+            @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData,
+            @Variable(name = "channelRequest") String channelRequest,
+            @Variable(name = "supplementaryData") Map<String, Object> supplementaryData) {
+        return workers.updateOperationsGovStack(transactionId, cbsPaymentId, cbsPaymentStatus, paymentSuccess, batchId, mergedPaymentData, channelRequest, supplementaryData, "redbank");
     }
 
     // Bluebank tenant workers
@@ -123,7 +127,9 @@ public class MultiTenantWorkerConfig {
             @Variable(name = "cbsPaymentStatus") String cbsPaymentStatus,
             @Variable(name = "paymentSuccess") Boolean paymentSuccess,
             @Variable(name = "batchId") String batchId,
-            @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData) {
-        return workers.updateOperationsGovStack(transactionId, cbsPaymentId, cbsPaymentStatus, paymentSuccess, batchId, mergedPaymentData, "bluebank");
+            @Variable(name = "mergedPaymentData") Map<String, Object> mergedPaymentData,
+            @Variable(name = "channelRequest") String channelRequest,
+            @Variable(name = "supplementaryData") Map<String, Object> supplementaryData) {
+        return workers.updateOperationsGovStack(transactionId, cbsPaymentId, cbsPaymentStatus, paymentSuccess, batchId, mergedPaymentData, channelRequest, supplementaryData, "bluebank");
     }
 }

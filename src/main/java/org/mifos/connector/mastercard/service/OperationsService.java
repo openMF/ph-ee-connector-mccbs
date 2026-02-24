@@ -30,7 +30,10 @@ public class OperationsService {
     public boolean updateTransferStatus(String transactionId, String status,
                                         String externalId, String statusDetails,
                                         String tenantId, String batchId,
-                                        BigDecimal amount, String currency) {
+                                        BigDecimal amount, String currency,
+                                        String payeePartyId, String payeePartyIdType,
+                                        String payerPartyId, String payerPartyIdType,
+                                        String payeeDfspId, String payerDfspId) {
 
         if (!operationsConfig.getApi().getEnabled()) {
             log.info("[OperationsDB] Integration disabled - skipping update for transaction: {} (status={}, externalId={})",
@@ -50,17 +53,25 @@ public class OperationsService {
             String statusDetailValue = buildStatusDetail(statusDetails, externalId);
 
             // Update transfers table in tenant-specific database
+            // Use COALESCE so we don't overwrite party fields already set by bulk-processor
             String sql = String.format(
-                "UPDATE %s.transfers SET STATUS = ?, STATUS_DETAIL = ?, COMPLETED_AT = NOW() " +
+                "UPDATE %s.transfers SET STATUS = ?, STATUS_DETAIL = ?, COMPLETED_AT = NOW(), " +
+                "PAYEE_PARTY_ID = COALESCE(PAYEE_PARTY_ID, ?), " +
+                "PAYEE_PARTY_ID_TYPE = COALESCE(PAYEE_PARTY_ID_TYPE, ?), " +
+                "PAYER_PARTY_ID = COALESCE(PAYER_PARTY_ID, ?), " +
+                "PAYER_PARTY_ID_TYPE = COALESCE(PAYER_PARTY_ID_TYPE, ?), " +
+                "PAYEE_DFSP_ID = COALESCE(PAYEE_DFSP_ID, ?), " +
+                "PAYER_DFSP_ID = COALESCE(PAYER_DFSP_ID, ?) " +
                 "WHERE TRANSACTION_ID = ?",
                 tenantId
             );
 
-            log.info("[OperationsDB] Updating transfer in database - tenant: {}, transaction: {}, status: {}, externalId: {}, batchId: {}",
-                    tenantId, transactionId, status, externalId, batchId);
-            log.debug("[OperationsDB] SQL: {} with params: [{}, {}, {}]", sql, status, statusDetailValue, transactionId);
+            log.info("[OperationsDB] Updating transfer in database - tenant: {}, transaction: {}, status: {}, externalId: {}, batchId: {}, payee: {}, payer: {}",
+                    tenantId, transactionId, status, externalId, batchId, payeePartyId, payerPartyId);
 
-            int rowsUpdated = jdbcTemplate.update(sql, status, statusDetailValue, transactionId);
+            int rowsUpdated = jdbcTemplate.update(sql, status, statusDetailValue,
+                    payeePartyId, payeePartyIdType, payerPartyId, payerPartyIdType,
+                    payeeDfspId, payerDfspId, transactionId);
 
             if (rowsUpdated > 0) {
                 log.info("[OperationsDB] ✓ Successfully updated {} row(s) in {}.transfers for transaction: {}",
@@ -73,7 +84,9 @@ public class OperationsService {
 
                 // INSERT new transfer record if UPDATE didn't find existing record
                 return insertTransferRecord(jdbcTemplate, transactionId, status, statusDetailValue,
-                                           externalId, tenantId, batchId, amount, currency);
+                                           externalId, tenantId, batchId, amount, currency,
+                                           payeePartyId, payeePartyIdType, payerPartyId, payerPartyIdType,
+                                           payeeDfspId, payerDfspId);
             }
 
         } catch (org.springframework.jdbc.CannotGetJdbcConnectionException e) {
@@ -103,22 +116,30 @@ public class OperationsService {
     private boolean insertTransferRecord(JdbcTemplate jdbcTemplate, String transactionId,
                                         String status, String statusDetailValue,
                                         String externalId, String tenantId,
-                                        String batchId, BigDecimal amount, String currency) {
+                                        String batchId, BigDecimal amount, String currency,
+                                        String payeePartyId, String payeePartyIdType,
+                                        String payerPartyId, String payerPartyIdType,
+                                        String payeeDfspId, String payerDfspId) {
         try {
             String insertSql = String.format(
                 "INSERT INTO %s.transfers (TRANSACTION_ID, STATUS, STATUS_DETAIL, " +
-                "BATCH_ID, AMOUNT, CURRENCY, STARTED_AT, COMPLETED_AT, DIRECTION) " +
-                "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), 'OUTBOUND')",
+                "BATCH_ID, AMOUNT, CURRENCY, STARTED_AT, COMPLETED_AT, DIRECTION, " +
+                "PAYEE_PARTY_ID, PAYEE_PARTY_ID_TYPE, PAYER_PARTY_ID, PAYER_PARTY_ID_TYPE, " +
+                "PAYEE_DFSP_ID, PAYER_DFSP_ID) " +
+                "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), 'OUTBOUND', ?, ?, ?, ?, ?, ?)",
                 tenantId
             );
 
             Long amountLong = (amount != null) ? amount.longValue() : null;
 
-            log.debug("[OperationsDB] INSERT SQL: {} with params: [{}, {}, {}, {}, {}, {}]",
-                    insertSql, transactionId, status, statusDetailValue, batchId, amountLong, currency);
+            log.debug("[OperationsDB] INSERT SQL: {} with params: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}]",
+                    insertSql, transactionId, status, statusDetailValue, batchId, amountLong, currency,
+                    payeePartyId, payeePartyIdType, payerPartyId, payerPartyIdType, payeeDfspId, payerDfspId);
 
             int rowsInserted = jdbcTemplate.update(insertSql, transactionId, status,
-                                                  statusDetailValue, batchId, amountLong, currency);
+                                                  statusDetailValue, batchId, amountLong, currency,
+                                                  payeePartyId, payeePartyIdType, payerPartyId, payerPartyIdType,
+                                                  payeeDfspId, payerDfspId);
 
             if (rowsInserted > 0) {
                 log.info("[OperationsDB] ✓ Successfully inserted new transfer record in {}.transfers for transaction: {}, externalId: {}",
@@ -138,14 +159,19 @@ public class OperationsService {
             // Retry UPDATE since record now exists
             String updateSql = String.format(
                 "UPDATE %s.transfers SET STATUS = ?, STATUS_DETAIL = ?, COMPLETED_AT = NOW(), " +
-                "BATCH_ID = COALESCE(BATCH_ID, ?), AMOUNT = COALESCE(AMOUNT, ?), CURRENCY = COALESCE(CURRENCY, ?) " +
+                "BATCH_ID = COALESCE(BATCH_ID, ?), AMOUNT = COALESCE(AMOUNT, ?), CURRENCY = COALESCE(CURRENCY, ?), " +
+                "PAYEE_PARTY_ID = COALESCE(PAYEE_PARTY_ID, ?), PAYEE_PARTY_ID_TYPE = COALESCE(PAYEE_PARTY_ID_TYPE, ?), " +
+                "PAYER_PARTY_ID = COALESCE(PAYER_PARTY_ID, ?), PAYER_PARTY_ID_TYPE = COALESCE(PAYER_PARTY_ID_TYPE, ?), " +
+                "PAYEE_DFSP_ID = COALESCE(PAYEE_DFSP_ID, ?), PAYER_DFSP_ID = COALESCE(PAYER_DFSP_ID, ?) " +
                 "WHERE TRANSACTION_ID = ?",
                 tenantId
             );
 
             Long amountLong = (amount != null) ? amount.longValue() : null;
             int rowsUpdated = jdbcTemplate.update(updateSql, status, statusDetailValue,
-                    batchId, amountLong, currency, transactionId);
+                    batchId, amountLong, currency,
+                    payeePartyId, payeePartyIdType, payerPartyId, payerPartyIdType,
+                    payeeDfspId, payerDfspId, transactionId);
 
             if (rowsUpdated > 0) {
                 log.info("[OperationsDB] ✓ Successfully updated transfer on retry for transaction: {}", transactionId);
