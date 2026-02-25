@@ -1,0 +1,104 @@
+spring:
+  application:
+    name: ph-ee-connector-mastercard-cbs
+
+  datasource:
+    url: ${DATASOURCE_URL:jdbc:mysql://operationsmysql.paymenthub.svc.cluster.local:3306/operations}
+    username: ${DATASOURCE_USERNAME:root}
+    password: ${DATASOURCE_PASSWORD:mysql}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Zeebe Configuration
+zeebe:
+  client:
+    broker:
+      gateway-address: ${ZEEBE_BROKER_CONTACTPOINT:phee-zeebe-gateway.paymenthub.svc.cluster.local:26500}
+    worker:
+      threads: ${ZEEBE_CLIENT_WORKER_THREADS:5}
+      defaultName: mastercard-cbs-connector
+      defaultType: mastercard-cbs
+    job:
+      timeout: 30000
+      pollinterval: 100
+    request-timeout: 45000
+    message-time-to-live: 60000
+
+# Mastercard CBS Configuration
+mastercard:
+  api:
+    url: ${MASTERCARD_API_URL:https://sandbox.api.mastercard.com}
+    auth-url: ${MASTERCARD_AUTH_URL:https://sandbox.api.mastercard.com/oauth/token}
+    partner-id: ${MASTERCARD_PARTNER_ID:MIFOS_GOVSTACK}
+
+  oauth:
+    client-id: ${MASTERCARD_CLIENT_ID:demo_client_12345}
+    client-secret: ${MASTERCARD_CLIENT_SECRET:demo_secret_1234567890}
+    grant-type: client_credentials
+    token-cache-seconds: 3000
+
+  # OAuth1 Configuration (for real Mastercard CBS sandbox)
+  oauth1:
+    consumer-key: ${MASTERCARD_CONSUMER_KEY:}
+    signing-key-file: ${MASTERCARD_SIGNING_KEY_FILE:classpath:certs/signing-key.p12}
+    signing-key-alias: ${MASTERCARD_SIGNING_KEY_ALIAS:keyalias}
+    signing-key-password: ${MASTERCARD_SIGNING_KEY_PASSWORD:keystorepassword}
+
+  # JWE Encryption Configuration
+  encryption:
+    enabled: ${MASTERCARD_ENCRYPTION_ENABLED:false}
+    certificate-file: ${MASTERCARD_ENCRYPTION_CERT:classpath:certs/mastercard-encryption-key.p12}
+    certificate-password: ${MASTERCARD_ENCRYPTION_CERT_PASSWORD:keystorepassword}
+    finger-print: ${MASTERCARD_ENCRYPTION_FINGERPRINT:}
+    decryption-key-file: ${MASTERCARD_DECRYPTION_KEY:classpath:certs/client-encryption-key.pem}
+    decryption-key-alias: ${MASTERCARD_DECRYPTION_KEY_ALIAS:keyalias}
+    decryption-key-password: ${MASTERCARD_DECRYPTION_KEY_PASSWORD:keystorepassword}
+
+  payment:
+    timeout-seconds: 30
+    max-retries: 3
+    retry-delay-seconds: 5
+  status:
+    check-enabled: ${MASTERCARD_STATUS_CHECK_ENABLED:true}
+    poll-interval-seconds: 3
+
+# Operations App Configuration
+operations:
+  api:
+    base-url: ${OPERATIONS_API_URL:http://ph-ee-operations-app.paymenthub.svc.cluster.local}
+    timeout-seconds: 10
+    enabled: ${OPERATIONS_API_ENABLED:true}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    org.mifos: ${LOGGING_LEVEL_ORG_MIFOS:DEBUG}
+    io.camunda: ${LOGGING_LEVEL_IO_CAMUNDA:INFO}
+    org.springframework: INFO
+    org.springframework.web: ${LOGGING_LEVEL_SPRING_WEB:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
+
+# Management/Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
