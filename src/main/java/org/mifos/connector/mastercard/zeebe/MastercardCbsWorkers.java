@@ -367,7 +367,7 @@ public class MastercardCbsWorkers {
 
             // Prepare status details
             String statusDetails = cbsPaymentStatus;
-            if (statusDetails == null && !paymentSuccess) {
+            if (statusDetails == null && (paymentSuccess == null || !paymentSuccess)) {
                 statusDetails = "Payment failed - CBS did not complete";
             }
 
